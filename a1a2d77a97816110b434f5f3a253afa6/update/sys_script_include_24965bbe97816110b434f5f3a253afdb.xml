@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_snc_interface_cm.RESTAPI</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Provides functions for REST API</description>
+        <name>RESTAPI</name>
+        <script><![CDATA[var RESTAPI = Class.create();
+RESTAPI.prototype = {
+    initialize: function(sConfigName) {
+		this._cfg = new x_snc_json_cfg_mgr.getCfg(sConfigName);
+		this.oConfig = this._cfg.getConfig();
+		this._getValue = this._cfg._getValue;
+	},
+	
+	getData: function() {
+		
+	}, // function getData
+	
+	setData: function() {
+		
+	}, // function setData
+
+	type: 'RESTAPI',
+	version: '1.0.0',
+	author: 'Tom Hauri',
+	email: 'tom@hauri.biz'
+    
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-02-20 09:52:07</sys_created_on>
+        <sys_id>24965bbe97816110b434f5f3a253afdb</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>RESTAPI</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_script_include_24965bbe97816110b434f5f3a253afdb</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-02-22 16:14:19</sys_updated_on>
+    </sys_script_include>
+</record_update>

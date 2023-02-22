@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_app">
+    <sys_app action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <can_edit_in_studio>true</can_edit_in_studio>
+        <enforce_license>none</enforce_license>
+        <guided_setup_guid/>
+        <hide_on_ui>false</hide_on_ui>
+        <installed_as_dependency>false</installed_as_dependency>
+        <js_level>helsinki_es5</js_level>
+        <licensable>true</licensable>
+        <license/>
+        <license_category>none</license_category>
+        <license_definition/>
+        <license_model>none</license_model>
+        <logo>75a217ba97816110b434f5f3a253af75</logo>
+        <menu/>
+        <name>Interface Config Manager</name>
+        <private>false</private>
+        <restrict_table_access>false</restrict_table_access>
+        <runtime_access_tracking>permissive</runtime_access_tracking>
+        <scope>x_snc_interface_cm</scope>
+        <scoped_administration>false</scoped_administration>
+        <short_description>Build flexible integrations in JSON exposed via REST and GraphQL API</short_description>
+        <source>x_snc_interface_cm</source>
+        <store_correlation_id/>
+        <store_url/>
+        <sys_class_name>sys_app</sys_class_name>
+        <sys_code/>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-02-20 09:31:47</sys_created_on>
+        <sys_id>a1a2d77a97816110b434f5f3a253afa6</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-02-20 09:31:49</sys_updated_on>
+        <template/>
+        <trackable>true</trackable>
+        <uninstall_blocked>false</uninstall_blocked>
+        <user_role/>
+        <vendor/>
+        <vendor_prefix/>
+        <version>1.0.0</version>
+        <x_snc_devtools_documentation_url/>
+        <x_snc_devtools_maintainer/>
+        <x_snc_devtools_maintainer_email/>
+        <x_snc_devtools_repo_url/>
+    </sys_app>
+    <sys_attachment action="INSERT_OR_UPDATE">
+        <average_image_color/>
+        <chunk_size_bytes>700000</chunk_size_bytes>
+        <compressed>true</compressed>
+        <content_type>image/png</content_type>
+        <file_name>integration_cfg_mgr_icon.png</file_name>
+        <hash>e7d9cba3f0bf6c793d79627004c3a4b7b37dc8d333c57a8e45d45bd8ccfb3e65</hash>
+        <image_height/>
+        <image_width/>
+        <size_bytes>2054</size_bytes>
+        <size_compressed>2077</size_compressed>
+        <state>available</state>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-02-20 09:31:49</sys_created_on>
+        <sys_id>75a217ba97816110b434f5f3a253af75</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_updated_by>system</sys_updated_by>
+        <sys_updated_on>2023-02-20 09:31:51</sys_updated_on>
+        <table_name>sys_app</table_name>
+        <table_sys_id>a1a2d77a97816110b434f5f3a253afa6</table_sys_id>
+    </sys_attachment>
+    <sys_attachment_doc action="INSERT_OR_UPDATE">
+        <data>H4sIAAAAAAAAAA==</data>
+        <length>16</length>
+        <position>0</position>
+        <sys_attachment display_value="integration_cfg_mgr_icon.png" sys_id="75a217ba97816110b434f5f3a253af75">75a217ba97816110b434f5f3a253af75</sys_attachment>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-02-20 09:31:49</sys_created_on>
+        <sys_id>b5a217ba97816110b434f5f3a253af75</sys_id>
+    </sys_attachment_doc>
+    <sys_attachment_doc action="INSERT_OR_UPDATE">
+        <data>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</data>
+        <length>2756</length>
+        <position>1</position>
+        <sys_attachment display_value="integration_cfg_mgr_icon.png" sys_id="75a217ba97816110b434f5f3a253af75">75a217ba97816110b434f5f3a253af75</sys_attachment>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-02-20 09:31:49</sys_created_on>
+        <sys_id>39a217ba97816110b434f5f3a253af75</sys_id>
+    </sys_attachment_doc>
+</record_update>

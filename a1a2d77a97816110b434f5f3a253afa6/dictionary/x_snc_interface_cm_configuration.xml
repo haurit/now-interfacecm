@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element attributes="update_synch=true" extends="x_snc_json_cfg_mgr_json_configuration" label="Interface Configuration" max_length="40" name="x_snc_interface_cm_configuration" type="collection"/>
+</database>

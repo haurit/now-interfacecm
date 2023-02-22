@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_user_role">
+    <sys_user_role action="INSERT_OR_UPDATE">
+        <assignable_by/>
+        <can_delegate>true</can_delegate>
+        <description/>
+        <elevated_privilege>false</elevated_privilege>
+        <grantable>true</grantable>
+        <includes_roles/>
+        <name>x_snc_interface_cm.interface_configuration_ro</name>
+        <requires_subscription>-1</requires_subscription>
+        <scoped_admin>false</scoped_admin>
+        <suffix>interface_configuration_ro</suffix>
+        <sys_class_name>sys_user_role</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-02-20 09:36:23</sys_created_on>
+        <sys_id>ecb3d7fa97816110b434f5f3a253afc6</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>x_snc_interface_cm.interface_configuration_ro</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_user_role_ecb3d7fa97816110b434f5f3a253afc6</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-02-20 09:37:31</sys_updated_on>
+    </sys_user_role>
+</record_update>
