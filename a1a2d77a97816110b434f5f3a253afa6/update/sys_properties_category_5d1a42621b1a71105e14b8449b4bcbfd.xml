@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties_category">
+    <sys_properties_category action="INSERT_OR_UPDATE">
+        <name>Interface Configuration Manager</name>
+        <sys_class_name>sys_properties_category</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-07 09:06:53</sys_created_on>
+        <sys_id>5d1a42621b1a71105e14b8449b4bcbfd</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Interface Configuration Manager</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_properties_category_5d1a42621b1a71105e14b8449b4bcbfd</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-07 09:06:53</sys_updated_on>
+        <title><![CDATA[<p><strong>Interface Configuration Manager Properties</strong></p>]]></title>
+    </sys_properties_category>
+    <sys_translated_text action="delete_multiple" query="documentkey=5d1a42621b1a71105e14b8449b4bcbfd"/>
+</record_update>

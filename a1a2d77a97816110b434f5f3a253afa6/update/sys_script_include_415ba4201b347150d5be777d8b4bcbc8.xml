@@ -2,16 +2,23 @@
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>public</access>
         <active>true</active>
-        <api_name>x_snc_interface_cm.RESTAPIsetData</api_name>
+        <api_name>x_snc_interface_cm.RESTAPI_POST_PUT</api_name>
         <caller_access>1</caller_access>
         <client_callable>false</client_callable>
         <description/>
-        <name>RESTAPIsetData</name>
-        <script><![CDATA[var RESTAPIsetData = Class.create();
-RESTAPIsetData.prototype = {
-    initialize: function() {
+        <name>RESTAPI_POST_PUT</name>
+        <script><![CDATA[var RESTAPI_POST_PUT = Class.create();
+RESTAPI_POST_PUT.prototype = {
+    initialize: function(sInterfaceConfig) {
+		this._cfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfig);
+		this.oConfig = this._cfg.getConfig();
+		this._getValue = this._cfg._getValue;
 		this._gt = new global.GlobalTools();
     }, // function initialize
+	
+	setData: function(oValues, oError) {
+		
+	}, // function getData
 	
 	_parseConfigAndValidateRequestBody: function() {
         try {
@@ -228,7 +235,7 @@ _runBodyFieldCheck: function(sTable, oBeforeBodyCheck, bReturnFalseIfNotFound) {
         }, this); // field cfg condition
     }, // function _applyFieldCfgLogic
 
-    type: 'RESTAPIsetData',
+    type: 'RESTAPI_POST_PUT',
 	version: '1.0.0',
 	author: 'Tom Hauri',
 	email: 'tom@hauri.biz'
@@ -237,13 +244,13 @@ _runBodyFieldCheck: function(sTable, oBeforeBodyCheck, bReturnFalseIfNotFound) {
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-08-18 07:31:29</sys_created_on>
         <sys_id>415ba4201b347150d5be777d8b4bcbc8</sys_id>
-        <sys_mod_count>13</sys_mod_count>
-        <sys_name>RESTAPIsetData</sys_name>
+        <sys_mod_count>16</sys_mod_count>
+        <sys_name>RESTAPI_POST_PUT</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_415ba4201b347150d5be777d8b4bcbc8</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-09-18 05:21:07</sys_updated_on>
+        <sys_updated_on>2023-11-07 08:22:28</sys_updated_on>
     </sys_script_include>
 </record_update>
