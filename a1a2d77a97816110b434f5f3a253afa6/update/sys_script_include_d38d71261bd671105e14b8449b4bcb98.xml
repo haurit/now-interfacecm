@@ -9,11 +9,30 @@
         <name>RESTAPI_GET</name>
         <script><![CDATA[var RESTAPI_GET = Class.create();
 RESTAPI_GET.prototype = {
-    initialize: function(sInterfaceConfig) {
-        this._cfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfig);
-        this.oConfig = this._cfg.getConfig();
-        this._getValue = this._cfg._getValue;
+    initialize: function(oConfig) {
+		this.oConfig = oConfig;
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(oConfig);
+		this._getValue = this._getCfg.getValue;
         this._gt = new global.GlobalTools();
+		this._gtArray = new global.GlobalToolsArray();
+		this._gtTable = new global.GlobalToolsTable();
+		this._gtRecordRead = new global.GlobalToolsRecordRead();
+		this.oVarTypeIntTypeMap = {
+            '3': 'choice',
+            '5': 'choice',
+            '7': 'boolean',
+            '8': 'reference',
+            '9': 'date',
+            '10': 'date_time',
+            '18': 'reference',
+            '21': 'list',
+            '31': 'reference',
+        }; // variable type map
+		this.iResponseStatusCode = 200;
+		this.oResponseBody = {};
+		this.iRelatedTablesMandatoryTarget = 0;
+        this.iRelatedTablesMandatoryCount = 0;
+        this.iNumberOfRecordsReturned = 0;
     }, // function initialize
 
     process: function(oRequest, oResponse, bJSON) {
@@ -22,10 +41,10 @@ RESTAPI_GET.prototype = {
         this.oResponse = oResponse;
         this.bJSON = bJSON;
         this._impersonateUser();
-        try {
+        //try {
             if ((this.oConfig) && (this.oConfig.hasOwnProperty('oTables')) && (this.oConfig['sCheckEncodedQueryParam'])) {
                 var aConfigTables = Object.keys(this.oConfig['oTables']);
-                var sFirstTable = ((aConfigTables) && (Array.isArray(aConfigTables)) && (aConfigTables.length > 0)) ? aConfigTables[0] : '';
+                var sFirstTable = (this._gtArray.isValidArray(aConfigTables)) ? aConfigTables[0] : '';
                 if (sFirstTable) {
                     var sCheckEncodedQueryParam = this.oConfig['sCheckEncodedQueryParam'];
                     var sEncodedQueryParam = this.oRequest.queryParams[sCheckEncodedQueryParam];
@@ -48,7 +67,7 @@ RESTAPI_GET.prototype = {
                 }, this); // each table
                 if (!this.bError) {
                     if (this.oConfig['bLog']) {
-                        gs.info('NOWCORESTUtils.getData oBody: ' + JSON.stringify(oBody));
+                        gs.info('RESTAPI_GET.process oBody: ' + JSON.stringify(oBody));
                     } // if log
                     if (bJSON) {
                         this.oBody = oBody;
@@ -59,9 +78,9 @@ RESTAPI_GET.prototype = {
                     } // if bjson
                 } // if no error
             } // if valid input
-        } catch (oEx) {
-            this._setError('500_001', [], [String(oEx)]);
-        } // try get table
+        //} catch (oEx) {
+        //    this._setError('500_001', [], [String(oEx)]);
+        //} // try get table
         if (this.bLogToTable) {
             this.logRequest();
         } // if log to table
@@ -101,7 +120,7 @@ RESTAPI_GET.prototype = {
         if (this.bUseFieldLabel) {
             sAttachmentLabel = gs.getMessage('attachments');
         } else if (this.bUseFieldCamelCaseLabel) {
-            sAttachmentLabel = this._convertNametoCamelCase('attachments');
+            sAttachmentLabel = this._gt.convertUnderscoretoCamelCase('attachments');
         } // if use field label
         oRecord[sAttachmentLabel] = aAttachments;
     }, // function _getAttachmentInfo
@@ -118,7 +137,7 @@ RESTAPI_GET.prototype = {
                 edElementDescriptor;
             if (sReferenceField) {
                 if (this.bUseFieldCamelCaseLabel) {
-                    sReferenceFieldLabel = this._convertNametoCamelCase(sReferenceField);
+                    sReferenceFieldLabel = this._gt.convertUnderscoretoCamelCase(sReferenceField);
                 } else if ((sReferenceField) && (sReferenceField == 'variables')) {
                     if (this.bUseFieldLabel) {
                         sReferenceFieldLabel = gs.getMessage('Variables');
@@ -141,17 +160,17 @@ RESTAPI_GET.prototype = {
                         return true;
                     } // if question
                     if (this.bUseFieldCamelCaseLabel) {
-                        sFieldLabel = this._convertNametoCamelCase(sField);
+                        sFieldLabel = this._gt.convertUnderscoretoCamelCase(sField);
                     } else if (this.bUseFieldLabel) {
                         sFieldLabel = oQuestion.getLabel();
                     } // if label
                 } else if (this.bUseFieldCamelCaseLabel) {
-                    sFieldLabel = this._convertNametoCamelCase(sField);
+                    sFieldLabel = this._gt.convertUnderscoretoCamelCase(sField);
                 } else if (this.bUseFieldLabel) {
                     sFieldLabel = (grRecord.isValidField(sField)) ? grRecord[sField].getLabel() : sField;
                 } // if camel case label
                 if (!sReferenceField) {
-                    sValue = this._nsub(grRecord.getValue(sField), '');
+                    sValue = this._gt.nsub(grRecord.getValue(sField), '');
                     if ((!bDisplay) && (this.aDisplayValueTypes.length > 0)) {
                         geElement = grRecord.getElement(sField);
                         if (geElement) {
@@ -162,7 +181,7 @@ RESTAPI_GET.prototype = {
                         } // if element
                     } // if not display already and disp value types
                     if ((bDisplay) || ((sInternalType) && (this.aDisplayValueTypes.indexOf(sInternalType) != -1))) {
-                        sDisplayValue = this._nsub(grRecord.getDisplayValue(sField));
+                        sDisplayValue = this._gt.nsub(grRecord.getDisplayValue(sField));
                         if (this.bLegacyDisplayValue) {
                             oRecord[sFieldLabel + this.sLegacyDisplayValuePostfix] = sDisplayValue;
                         } else {
@@ -178,13 +197,13 @@ RESTAPI_GET.prototype = {
                 } else if ((sReferenceField == 'variables') || (grRecord[sReferenceField])) {
                     if ((sReferenceField) && (sReferenceField == 'variables')) {
                         sValue = oQuestion.getValue();
-                        sDisplayValue = this._nsub(String(oQuestion.getDisplayValue()), '');
+                        sDisplayValue = this._gt.nsub(String(oQuestion.getDisplayValue()), '');
                         if ((!bDisplay) && (this.aDisplayValueTypes.length > 0)) {
                             sInternalType = this.oVarTypeIntTypeMap[oQuestion.getType()];
                         } // if not display already and disp value types
                     } else {
-                        sValue = this._nsub(String(grRecord[sReferenceField][sField]), '');
-                        sDisplayValue = this._nsub(String(grRecord[sReferenceField][sField].getDisplayValue()), '');
+                        sValue = this._gt.nsub(String(grRecord[sReferenceField][sField]), '');
+                        sDisplayValue = this._gt.nsub(String(grRecord[sReferenceField][sField].getDisplayValue()), '');
                         if ((!bDisplay) && (this.aDisplayValueTypes.length > 0)) {
                             geElement = grRecord.getElement(sReferenceField + '.' + sField);
                             if (geElement) {
@@ -223,8 +242,8 @@ RESTAPI_GET.prototype = {
                 if ((!grRecord.isValidField(sFieldName)) || ((this.bUseGlideRecordSecure) && (!grRecord[sFieldName].canRead()))) {
                     return true;
                 } // if field is invalid or secure mode and no can read
-                sReturnType = this._nsub(oJournalFields[sFieldName], 'string', 'string', 'sReturnType'); // string, array
-                iNumber = this._nsub(oJournalFields[sFieldName], 1, 'number', 'iNumber'); // integer 1 (last entry), 2-x (last x entries), -1 (all)
+                sReturnType = this._gt.nsub(oJournalFields[sFieldName], 'string', 'string', 'sReturnType'); // string, array
+                iNumber = this._gt.nsub(oJournalFields[sFieldName], 1, 'number', 'iNumber'); // integer 1 (last entry), 2-x (last x entries), -1 (all)
                 if (iNumber == 1) {
                     oRecord[sFieldName] = String(grRecord[sFieldName].getJournalEntry(1));
                 } else {
@@ -245,8 +264,8 @@ RESTAPI_GET.prototype = {
             bAllFields = false,
             bAllDisplayFields = false;
         Object.keys(oReferenceFields).forEach(function(sReferenceField) {
-            aFields = this._nsub(oReferenceFields[sReferenceField], [], 'array', 'aFields');
-            aDisplayFields = this._nsub(oReferenceFields[sReferenceField], [], 'array', 'aDisplayFields');
+            aFields = this._gt.nsub(oReferenceFields[sReferenceField], [], 'array', 'aFields');
+            aDisplayFields = this._gt.nsub(oReferenceFields[sReferenceField], [], 'array', 'aDisplayFields');
             bAllFields = ((aFields.length > 0) && (aFields[0] == 'allfields')) ? true : false;
             bAllDisplayFields = ((aDisplayFields.length > 0) && (aDisplayFields[0] == 'allfields')) ? true : false;
             if ((!sReferenceField == 'variables') && (!grRecord.isValidField(sReferenceField)) || ((this.bUseGlideRecordSecure) && (!grRecord[sReferenceField].canRead()))) {
@@ -271,23 +290,23 @@ RESTAPI_GET.prototype = {
     }, // function _getRefFieldValues
 
     _getAttributeTables: function(grRecord, oRecord, oAttributeTable) {
-        var sBaseTableRecord = this._getAbsoluteBase(grRecord.getTableName());
-        var sBaseTableName = this._nsub(oAttributeTable, '', 'string', 'sBaseTableName');
+        var sBaseTableRecord = this._gtTable.getAbsoluteBase(grRecord.getTableName());
+        var sBaseTableName = this._gt.nsub(oAttributeTable, '', 'string', 'sBaseTableName');
         if ((sBaseTableName) && (sBaseTableName == sBaseTableRecord)) {
             var sUniqueValue = grRecord.getUniqueValue();
-            var sAttributeTableName = this._nsub(oAttributeTable, '', 'string', 'sAttributeTableName');
-            var sAttributeReferenceField = this._nsub(oAttributeTable, {}, 'string', 'sAttributeReferenceField');
-            var sAttributeNameField = this._nsub(oAttributeTable, '', 'string', 'sAttributeNameField');
-            var sAttributeValueField = this._nsub(oAttributeTable, '', 'string', 'sAttributeValueField');
-            var aCIAttributeNames = this._nsub(oAttributeTable, [], 'array', 'aCIAttributeNames');
-            var sFieldPrefix = this._nsub(oAttributeTable, '', 'string', 'sFieldPrefix');
+            var sAttributeTableName = this._gt.nsub(oAttributeTable, '', 'string', 'sAttributeTableName');
+            var sAttributeReferenceField = this._gt.nsub(oAttributeTable, {}, 'string', 'sAttributeReferenceField');
+            var sAttributeNameField = this._gt.nsub(oAttributeTable, '', 'string', 'sAttributeNameField');
+            var sAttributeValueField = this._gt.nsub(oAttributeTable, '', 'string', 'sAttributeValueField');
+            var aCIAttributeNames = this._gt.nsub(oAttributeTable, [], 'array', 'aCIAttributeNames');
+            var sFieldPrefix = this._gt.nsub(oAttributeTable, '', 'string', 'sFieldPrefix');
             var sAttributeValue = '';
             if (sAttributeTableName) {
                 var grAttribute = new GlideRecord(sAttributeTableName);
                 grAttribute.addEncodedQuery(sAttributeReferenceField + '=' + sUniqueValue + '^' + sAttributeNameField + 'IN' + aCIAttributeNames.join(','));
                 grAttribute.query();
                 while (grAttribute.next()) {
-                    sAttributeValue = this._nsub(grAttribute.getValue(sAttributeValueField), '');
+                    sAttributeValue = this._gt.nsub(grAttribute.getValue(sAttributeValueField), '');
                     oRecord[sFieldPrefix + grAttribute.getValue(sAttributeNameField)] = sAttributeValue;
                 } // while attribute
             } // if attribute table
@@ -317,24 +336,24 @@ RESTAPI_GET.prototype = {
                 sKeyValue = grRecord[oRelatedTables[sRelatedTable]['sKeySourceField']];
             } // if variables
             sQuery = oRelatedTables[sRelatedTable]['sKeyTargetField'] + sKeyTargetFieldOperator + sKeyValue;
-            var sRelTableQuery = this._nsub(oRelatedTables[sRelatedTable], '', 'string', 'sQuery');
+            var sRelTableQuery = this._gt.nsub(oRelatedTables[sRelatedTable], '', 'string', 'sQuery');
             if (sRelTableQuery) {
                 sQuery = sQuery + '^' + sRelTableQuery;
             } // if query
-            var aOrderBy = this._nsub(oRelatedTables[sRelatedTable], [], 'array', 'aOrderBy');
-            var aOrderByDesc = this._nsub(oRelatedTables[sRelatedTable], [], 'array', 'aOrderByDesc');
-            var aFields = this._nsub(oRelatedTables[sRelatedTable], [], 'array', 'aFields');
-            var aDisplayFields = this._nsub(oRelatedTables[sRelatedTable], [], 'array', 'aDisplayFields');
-            var oJournalFields = this._nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oJournalFields');
-            var oReferenceFields = this._nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oReferenceFields');
-            var oRelRelatedTables = this._nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oRelatedTables');
-            var oRelAttributeTable = this._nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oAttributeTable');
-            var sReturnType = this._nsub(oRelatedTables[sRelatedTable], '', 'string', 'sReturnType');
-            var bUniqueChildResultId = this._nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bUniqueChildResultId');
-            var bValidParentObject = this._nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bValidParentObject');
-            var bReturnAttachmentInfoObject = this._nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bReturnAttachmentInfoObject');
-            var bReturnAttachmentInfoArray = this._nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bReturnAttachmentInfoArray');
-            var sTableName = this._nsub(oRelatedTables[sRelatedTable], '', 'string', 'sTableName');
+            var aOrderBy = this._gt.nsub(oRelatedTables[sRelatedTable], [], 'array', 'aOrderBy');
+            var aOrderByDesc = this._gt.nsub(oRelatedTables[sRelatedTable], [], 'array', 'aOrderByDesc');
+            var aFields = this._gt.nsub(oRelatedTables[sRelatedTable], [], 'array', 'aFields');
+            var aDisplayFields = this._gt.nsub(oRelatedTables[sRelatedTable], [], 'array', 'aDisplayFields');
+            var oJournalFields = this._gt.nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oJournalFields');
+            var oReferenceFields = this._gt.nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oReferenceFields');
+            var oRelRelatedTables = this._gt.nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oRelatedTables');
+            var oRelAttributeTable = this._gt.nsub(oRelatedTables[sRelatedTable], {}, 'object', 'oAttributeTable');
+            var sReturnType = this._gt.nsub(oRelatedTables[sRelatedTable], '', 'string', 'sReturnType');
+            var bUniqueChildResultId = this._gt.nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bUniqueChildResultId');
+            var bValidParentObject = this._gt.nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bValidParentObject');
+            var bReturnAttachmentInfoObject = this._gt.nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bReturnAttachmentInfoObject');
+            var bReturnAttachmentInfoArray = this._gt.nsub(oRelatedTables[sRelatedTable], false, 'boolean', 'bReturnAttachmentInfoArray');
+            var sTableName = this._gt.nsub(oRelatedTables[sRelatedTable], '', 'string', 'sTableName');
             sTableName = (!sTableName) ? this._getTableLabel(sRelatedTable) : sTableName;
             if (String(sRelatedTable).includes('|')) {
                 aTempRelTable = sRelatedTable.split('|');
@@ -392,32 +411,32 @@ RESTAPI_GET.prototype = {
     _getTableData: function(sTable, iCount, sQuery, aOrderBy, aOrderByDesc, aFields, aDisplayFields, oJournalFields, oReferenceFields, oRelatedTables, oAttributeTable, sReturnType, bValidParentObject, bReturnAttachmentInfoObject, bReturnAttachmentInfoArray) {
         var sQueryParamsQuery = '';
         if (!sQuery) {
-            var sParameterQuery = this._nsub(this.oConfig['oTables'][sTable], '', 'string', 'sParameterQuery');
+            var sParameterQuery = this._gt.nsub(this.oConfig['oTables'][sTable], '', 'string', 'sParameterQuery');
             if (sParameterQuery) {
-                sQueryParamsQuery = this._replaceFieldsInString(sParameterQuery, this._nsub(this.oConfig, {}, 'object', 'oQueryParams'));
+                sQueryParamsQuery = this._gt.replacePlaceholders(sParameterQuery, this._gt.nsub(this.oConfig, {}, 'object', 'oQueryParams'));
             } else {
-                sQueryParamsQuery = this._nsub(this.oConfig, '', 'string', 'sQueryParamsQuery');
+                sQueryParamsQuery = this._gt.nsub(this.oConfig, '', 'string', 'sQueryParamsQuery');
             } // if param query
         } // if query
-        var bPreventQueryParams = (sQuery) ? true : this._nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bPreventQueryParams');
-        var bOnlyReturnOneRecord = (iCount !== undefined) ? false : this._nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bOnlyReturnOneRecord');
-        var bReturnAttachmentInfoObject = (iCount !== undefined) ? this._nsub(bReturnAttachmentInfoObject, false) : this._nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bReturnAttachmentInfoObject');
-        var bReturnAttachmentInfoArray = (iCount !== undefined) ? this._nsub(bReturnAttachmentInfoArray, false) : this._nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bReturnAttachmentInfoArray');
-        var iMaxReturnCount = (iCount !== undefined) ? '' : this._nsub(this.oConfig['oTables'][sTable], 100, 'number', 'iMaxReturnCount');
+        var bPreventQueryParams = (sQuery) ? true : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bPreventQueryParams');
+        var bOnlyReturnOneRecord = (iCount !== undefined) ? false : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bOnlyReturnOneRecord');
+        bReturnAttachmentInfoObject = (iCount !== undefined) ? this._gt.nsub(bReturnAttachmentInfoObject, false) : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bReturnAttachmentInfoObject');
+        bReturnAttachmentInfoArray = (iCount !== undefined) ? this._gt.nsub(bReturnAttachmentInfoArray, false) : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bReturnAttachmentInfoArray');
+        var iMaxReturnCount = (iCount !== undefined) ? '' : this._gt.nsub(this.oConfig['oTables'][sTable], 100, 'number', 'iMaxReturnCount');
         iMaxReturnCount = ((iMaxReturnCount) && (this.iQueryParamsMaxReturnCount)) ? this.iQueryParamsMaxReturnCount : iMaxReturnCount;
-        var bErrorMaxReturnCount = (iCount !== undefined) ? false : this._nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bErrorMaxReturnCount');
+        var bErrorMaxReturnCount = (iCount !== undefined) ? false : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bErrorMaxReturnCount');
         var iQueryParamsReturnOffset = ((iCount !== undefined) || (!this.iQueryParamsReturnOffset)) ? '' : this.iQueryParamsReturnOffset;
         if (iCount === undefined) {
-            sQuery = (sQuery) ? sQuery : this._nsub(this.oConfig['oTables'][sTable], 'false', 'string', 'sQuery');
-            aOrderBy = (this.aQueryParamsOrderByFields) ? this.aQueryParamsOrderByFields : this._nsub(this.oConfig['oTables'][sTable], [], 'array', 'aOrderBy');
-            aOrderByDesc = (this.aQueryParamsOrderByDescFields) ? this.aQueryParamsOrderByDescFields : this._nsub(this.oConfig['oTables'][sTable], [], 'array', 'aOrderByDesc');
-            aFields = (aFields) ? aFields : this._filterRequestedFields(this._nsub(this.oConfig['oTables'][sTable], [], 'array', 'aFields'));
-            aDisplayFields = (aDisplayFields) ? aDisplayFields : this._filterRequestedFields(this._nsub(this.oConfig['oTables'][sTable], [], 'array', 'aDisplayFields'));
-            oJournalFields = (oJournalFields) ? oJournalFields : this._nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oJournalFields');
-            oReferenceFields = (oReferenceFields) ? oReferenceFields : this._nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oReferenceFields');
-            oRelatedTables = (oRelatedTables) ? oRelatedTables : this._nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oRelatedTables');
-            oAttributeTable = (oAttributeTable) ? oAttributeTable : this._nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oAttributeTable');
-            this.iRelatedTablesMandatoryTarget = this._nsub(this.oConfig['oTables'][sTable], 0, 'integer', 'iRelatedTablesMandatoryTarget');
+            sQuery = (sQuery) ? sQuery : this._gt.nsub(this.oConfig['oTables'][sTable], 'false', 'string', 'sQuery');
+            aOrderBy = (this.aQueryParamsOrderByFields) ? this.aQueryParamsOrderByFields : this._gt.nsub(this.oConfig['oTables'][sTable], [], 'array', 'aOrderBy');
+            aOrderByDesc = (this.aQueryParamsOrderByDescFields) ? this.aQueryParamsOrderByDescFields : this._gt.nsub(this.oConfig['oTables'][sTable], [], 'array', 'aOrderByDesc');
+            aFields = (aFields) ? aFields : this._filterRequestedFields(this._gt.nsub(this.oConfig['oTables'][sTable], [], 'array', 'aFields'));
+            aDisplayFields = (aDisplayFields) ? aDisplayFields : this._filterRequestedFields(this._gt.nsub(this.oConfig['oTables'][sTable], [], 'array', 'aDisplayFields'));
+            oJournalFields = (oJournalFields) ? oJournalFields : this._gt.nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oJournalFields');
+            oReferenceFields = (oReferenceFields) ? oReferenceFields : this._gt.nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oReferenceFields');
+            oRelatedTables = (oRelatedTables) ? oRelatedTables : this._gt.nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oRelatedTables');
+            oAttributeTable = (oAttributeTable) ? oAttributeTable : this._gt.nsub(this.oConfig['oTables'][sTable], {}, 'object', 'oAttributeTable');
+            this.iRelatedTablesMandatoryTarget = this._gt.nsub(this.oConfig['oTables'][sTable], 0, 'integer', 'iRelatedTablesMandatoryTarget');
         } // if first called
         sReturnType = (sReturnType) ? sReturnType : 'array'; // initial can only be array 
         var grRecord = new GlideRecord(sTable);
@@ -433,7 +452,7 @@ RESTAPI_GET.prototype = {
         if ((!bPreventQueryParams) && (sQueryParamsQuery)) {
             grRecord.addEncodedQuery(sQueryParamsQuery);
         } // if apply query param and query param
-        var iRecordCount = this._countRecords(sTable, grRecord.getEncodedQuery());
+        var iRecordCount = this._gtRecordRead.countRecords(sTable, grRecord.getEncodedQuery());
         this.iNumberOfRecordsReturned = iRecordCount;
         if ((bErrorMaxReturnCount) && (Number(iRecordCount) > Number(iMaxReturnCount))) {
             this._setError('413_001', [], [iMaxReturnCount, iRecordCount]);
@@ -446,13 +465,13 @@ RESTAPI_GET.prototype = {
         } else if (iMaxReturnCount) {
             grRecord.setLimit(iMaxReturnCount);
         } // if return off set
-        if ((aOrderBy) && (Array.isArray(aOrderBy)) && (aOrderBy.length > 0)) {
+        if (this._gtArray.isValidArray(aOrderBy)) {
             var fnOrderBy = function(sOrderByField) {
                 grRecord.orderBy(sOrderByField);
             };
             aOrderBy.forEach(fnOrderBy);
         } // if order by
-        if ((aOrderByDesc) && (Array.isArray(aOrderByDesc)) && (aOrderByDesc.length > 0)) {
+        if (this._gtArray.isValidArray(aOrderByDesc)) {
             var fnOrderByDesc = function(sOrderByField) {
                 grRecord.orderByDesc(sOrderByField);
             };
@@ -566,21 +585,20 @@ RESTAPI_GET.prototype = {
                 if (oRelatedTables) {
                     this._getRelTables(grRecordClass, oRecord, oRelatedTables, sRecordClassName);
                 } // if related tables
-                if (iCount === undefined) {
-                    // do nothing
-                } // if count not defined
                 if ((this.iRelatedTablesMandatoryCount != this.iRelatedTablesMandatoryTarget) && (iCount === undefined)) {
                     continue;
                 } else {
+					gs.info('tomtom oRecord: ' + JSON.stringify(oRecord));
                     aTable.push(oRecord);
                 } // if mandatory rel target
             } // if first	
         } // while record
         if (iCount != undefined) {
-            if ((Array.isArray(aTable)) && (aTable.length > 0) && (bValidParentObject)) {
+            if ((this._gtArray.isValidArray(aTable)) && (bValidParentObject)) {
                 this.iRelatedTablesMandatoryCount++;
             } // add related table count
         } // if not main table
+		gs.error('tomtom 2 sTable: ' + sTable + ' iRecordCount: ' + iRecordCount + ' iCount: ' + iCount + ' aTable: ' + aTable);
         if ((iCount === undefined) && (aTable.length == 0)) {
             this.iResponseStatusCode = 204;
         } // if main table and no record
@@ -606,7 +624,7 @@ RESTAPI_GET.prototype = {
                 iUpdatedOnDate = grHWRecord.sys_updated_on.getGlideObject().getNumericValue();
                 iTargetDate = this.oConfig['dHistoryWalk'].getNumericValue();
                 if (this.oConfig['bLog']) {
-                    gs.info('NOWCORESTUtils._getHistoryWalkRecord sys_updated_on: ' + grHWRecord.sys_updated_on.getGlideObject().getDisplayValue() + ' dHistoryWalk: ' + this.oConfig['dHistoryWalk'].getDisplayValue());
+                    gs.info('RESTAPI_GET._getHistoryWalkRecord sys_updated_on: ' + grHWRecord.sys_updated_on.getGlideObject().getDisplayValue() + ' dHistoryWalk: ' + this.oConfig['dHistoryWalk'].getDisplayValue());
                 } // if log
                 if (iUpdatedOnDate <= iTargetDate) {
                     bContinue = false;
@@ -628,31 +646,31 @@ RESTAPI_GET.prototype = {
             this._setError('405_002');
             return false;
         } // if not action
-        this.bLogToTable = this._nsub(this.oConfig, false, 'boolean', 'bLogToTable');
-        this.bNoWorkflow = this._nsub(this.oConfig, false, 'boolean', 'bNoWorkflow');
-        this.bNoDomain = this._nsub(this.oConfig, false, 'boolean', 'bNoDomain');
-        this.bUseFieldLabel = this._nsub(this.oConfig, false, 'boolean', 'bUseFieldLabel');
-        this.bUseFieldCamelCaseLabel = this._nsub(this.oConfig, false, 'boolean', 'bUseFieldCamelCaseLabel');
-        this.bUseTableCamelCaseLabel = this._nsub(this.oConfig, false, 'boolean', 'bUseTableCamelCaseLabel');
-        this.bUseTableLabel = this._nsub(this.oConfig, false, 'boolean', 'bUseTableLabel');
-        this.bLegacyDisplayValue = this._nsub(this.oConfig, false, 'boolean', 'bLegacyDisplayValue');
+        this.bLogToTable = this._gt.nsub(this.oConfig, false, 'boolean', 'bLogToTable');
+        this.bNoWorkflow = this._gt.nsub(this.oConfig, false, 'boolean', 'bNoWorkflow');
+        this.bNoDomain = this._gt.nsub(this.oConfig, false, 'boolean', 'bNoDomain');
+        this.bUseFieldLabel = this._gt.nsub(this.oConfig, false, 'boolean', 'bUseFieldLabel');
+        this.bUseFieldCamelCaseLabel = this._gt.nsub(this.oConfig, false, 'boolean', 'bUseFieldCamelCaseLabel');
+        this.bUseTableCamelCaseLabel = this._gt.nsub(this.oConfig, false, 'boolean', 'bUseTableCamelCaseLabel');
+        this.bUseTableLabel = this._gt.nsub(this.oConfig, false, 'boolean', 'bUseTableLabel');
+        this.bLegacyDisplayValue = this._gt.nsub(this.oConfig, false, 'boolean', 'bLegacyDisplayValue');
         this.sLegacyDisplayValuePostfix = (this.oConfig.hasOwnProperty('sLegacyDisplayValuePostfix')) ? this.oConfig['sLegacyDisplayValuePostfix'] : '_dv';
-        this.aDisplayValueTypes = this._nsub(this.oConfig, [], 'array', 'aDisplayValueTypes');
+        this.aDisplayValueTypes = this._gt.nsub(this.oConfig, [], 'array', 'aDisplayValueTypes');
         this.sRefFieldConcatChar = (this.oConfig.hasOwnProperty('sRefFieldConcatChar')) ? this.oConfig['sRefFieldConcatChar'] : '_';
-        this.bUseGlideRecordSecure = this._nsub(this.oConfig, false, 'boolean', 'bUseGlideRecordSecure');
-        var aMandatoryQueryParams = this._nsub(this.oConfig, '', 'array', 'aMandatoryQueryParams');
-        var aExcludeQueryParams = this._nsub(this.oConfig, '', 'array', 'aExcludeQueryParams');
+        this.bUseGlideRecordSecure = this._gt.nsub(this.oConfig, false, 'boolean', 'bUseGlideRecordSecure');
+        var aMandatoryQueryParams = this._gt.nsub(this.oConfig, '', 'array', 'aMandatoryQueryParams');
+        var aExcludeQueryParams = this._gt.nsub(this.oConfig, '', 'array', 'aExcludeQueryParams');
         if ((this.oRequest['queryParams']) && (JSON.stringify(this.oRequest['queryParams']) != '{}')) {
             if (this.oConfig['bLog']) {
-                gs.info('NOWCORESTUtils.getData queryParams: ' + JSON.stringify(this.oRequest['queryParams']));
+                gs.info('RESTAPI_GET.getData queryParams: ' + JSON.stringify(this.oRequest['queryParams']));
             } // if log
-            var sQueryParamsQuery = decodeURI(this._nsub(this.oRequest['queryParams'], '', 'string', 'encoded_query'));
-            var sQueryParamsHistoryWalk = decodeURI(this._nsub(this.oRequest['queryParams'], '', 'string', 'history_walk'));
-            this.iQueryParamsMaxReturnCount = decodeURI(this._nsub(this.oRequest['queryParams'], '', 'string', 'max_return_items'));
-            this.iQueryParamsReturnOffset = decodeURI(this._nsub(this.oRequest['queryParams'], '', 'string', 'return_offset'));
-            this.aQueryParamsRequestedFields = this._convertCommaStringToArray(decodeURI(this._nsub(this.oRequest['queryParams'], '', 'string', 'requested_fields')));
-            this.aQueryParamsOrderByFields = this._convertCommaStringToArray(decodeURI(this._nsub(this.oRequest['queryParams'], '', 'string', 'orderby_fields')));
-            this.aQueryParamsOrderByDescFields = this._convertCommaStringToArray(decodeURI(this._nsub(this.oRequest['queryParams'], '', 'string', 'orderbydesc_fields')));
+            var sQueryParamsQuery = decodeURI(this._gt.nsub(this.oRequest['queryParams'], '', 'string', 'encoded_query'));
+            var sQueryParamsHistoryWalk = decodeURI(this._gt.nsub(this.oRequest['queryParams'], '', 'string', 'history_walk'));
+            this.iQueryParamsMaxReturnCount = decodeURI(this._gt.nsub(this.oRequest['queryParams'], '', 'string', 'max_return_items'));
+            this.iQueryParamsReturnOffset = decodeURI(this._gt.nsub(this.oRequest['queryParams'], '', 'string', 'return_offset'));
+            this.aQueryParamsRequestedFields = this._gtArray.convertCommaStringToArray(decodeURI(this._gt.nsub(this.oRequest['queryParams'], '', 'string', 'requested_fields')));
+            this.aQueryParamsOrderByFields = this._gtArray.convertCommaStringToArray(decodeURI(this._gt.nsub(this.oRequest['queryParams'], '', 'string', 'orderby_fields')));
+            this.aQueryParamsOrderByDescFields = this._gtArray.convertCommaStringToArray(decodeURI(this._gt.nsub(this.oRequest['queryParams'], '', 'string', 'orderbydesc_fields')));
             var aQueryParamsQuery = [],
                 sParamValue = '',
                 iMandatoryField = -1,
@@ -686,9 +704,9 @@ RESTAPI_GET.prototype = {
             } // if history walk config
         } // if query params
         if (this.oConfig['bLog']) {
-            gs.info('NOWCORESTUtils._parseConfigAndValidateRequestParams sQueryParamsQuery: ' + this.oConfig['sQueryParamsQuery'] + ' dHistoryWalk: ' + this.oConfig['dHistoryWalk'] + ' aMandatoryQueryParams: ' + aMandatoryQueryParams);
+            gs.info('RESTAPI_GET._parseConfigAndValidateRequestParams sQueryParamsQuery: ' + this.oConfig['sQueryParamsQuery'] + ' dHistoryWalk: ' + this.oConfig['dHistoryWalk'] + ' aMandatoryQueryParams: ' + aMandatoryQueryParams);
         } // if log
-        if ((Array.isArray(aMandatoryQueryParams)) && (aMandatoryQueryParams.length > 0)) {
+        if (this._gtArray.isValidArray(aMandatoryQueryParams)) {
             this._setError('400_001', [], [String(aMandatoryQueryParams)]);
             return false;
         } // if mandatory query param missing
@@ -699,11 +717,12 @@ RESTAPI_GET.prototype = {
         this.bError = true;
         aErrorMessageArgs = (aErrorMessageArgs) ? aErrorMessageArgs : [];
         aErrorDetailArgs = (aErrorDetailArgs) ? aErrorDetailArgs : [];
-        var sErrorMessage = gs.getMessage('NOWCORESTUtils_' + sErrorCode + '_ErrorMessage', aErrorMessageArgs);
-        var sErrorDetail = gs.getMessage('NOWCORESTUtils_' + sErrorCode + '_ErrorDetail', aErrorDetailArgs);
+		 gs.error('RESTAPI_GET._setError Code: ' + sErrorCode + ' aErrorDetailArgs: ' + aErrorDetailArgs);
+        var sErrorMessage = gs.getMessage('RESTAPI_GET_' + sErrorCode + '_ErrorMessage', aErrorMessageArgs);
+        var sErrorDetail = gs.getMessage('RESTAPI_GET_' + sErrorCode + '_ErrorDetail', aErrorDetailArgs);
         var aErrorCode = sErrorCode.split('_');
         if (this.oConfig['bLog']) {
-            gs.error('NOWCORESTUtils._setError Code: ' + sErrorCode + ' Error: ' + sErrorMessage + ' Details: ' + sErrorDetail);
+            gs.error('RESTAPI_GET._setError Code: ' + sErrorCode + ' Error: ' + sErrorMessage + ' Details: ' + sErrorDetail);
         } // if log
         this.oResponseBody = {
             'Status': aErrorCode[0],
@@ -749,12 +768,12 @@ RESTAPI_GET.prototype = {
                 grRESTLog.insert();
             } // if table
         } catch (oEx) {
-            gs.error('NOWCORESTUtils.logRequest Error: ' + String(oEx));
+            gs.error('RESTAPI_GET.logRequest Error: ' + String(oEx));
         } // try
     }, // function logRequest
 
     _impersonateUser: function() {
-        var sDefaultUser = this._nsub(this.oConfig, '', 'string', 'sDefaultUser');
+        var sDefaultUser = this._gt.nsub(this.oConfig, '', 'string', 'sDefaultUser');
         if ((this.sImpersonateUser) || (sDefaultUser)) {
             var grUser = new GlideRecord('sys_user');
             if ((this.sImpersonateUser) && (!grUser.get(this.sImpersonateUser))) {
@@ -793,8 +812,8 @@ RESTAPI_GET.prototype = {
                 } // if not is already this user
             } // if valid user
             if (!new GlideImpersonate().isImpersonating()) {
-                this.aMessage.push(gs.getMessage('NOWCORESTUtils_CannotImpersonateUser', [this.sImpersonateUser, sDefaultUser]));
-                this.sJournalMessage = gs.getMessage('NOWCORESTUtils_CannotImpersonateUser', [this.sImpersonateUser, sDefaultUser]);
+                this.aMessage.push(gs.getMessage('RESTAPI_GET_CannotImpersonateUser', [this.sImpersonateUser, sDefaultUser]));
+                this.sJournalMessage = gs.getMessage('RESTAPI_GET_CannotImpersonateUser', [this.sImpersonateUser, sDefaultUser]);
             } else {
                 this.sImpersonateUser = gs.getUserName();
             } // if not impersonate
@@ -819,7 +838,7 @@ RESTAPI_GET.prototype = {
                 return sTableName;
             } // if table is valid
         } else if ((this.bUseTableCamelCaseLabel) && (sTableName.includes('_'))) {
-            return this._convertNametoCamelCase(sTableName) + sIndexName;
+            return this._gt.convertUnderscoretoCamelCase(sTableName) + sIndexName;
         } else {
             return sTableName;
         } // if no table name
@@ -837,14 +856,14 @@ RESTAPI_GET.prototype = {
             }, this); // each field
             sAddlQuery = '^elementNOT IN' + aExcludeFields.join(',');
         } // if more than one field
-        var aTableHierarchy = this._getTableHierarchy(sTableName);
+        var aTableHierarchy = this._gtTable.getTableHierarchy(sTableName);
         var grDict = new GlideRecord('sys_dictionary');
         grDict.addEncodedQuery('active=true^nameIN' + aTableHierarchy.join(',') + '^internal_type!=collection^ORinternal_type=NULL' + sAddlQuery);
         grDict.query();
         while (grDict.next()) {
             aAllFields.push(grDict.getValue('element'));
         } // all fields
-        return this._unique(aAllFields).sort();
+        return this._gtArray.unique(aAllFields).sort();
     }, // function _getTableFields
 
     _getQuestionFromVariable: function(grRecord, sField) {
@@ -860,8 +879,8 @@ RESTAPI_GET.prototype = {
     }, // function _getQuestionFromVariable
 
     _filterRequestedFields: function(aFields) {
-        if ((this.aQueryParamsRequestedFields) && (Array.isArray(this.aQueryParamsRequestedFields)) && (this.aQueryParamsRequestedFields.length > 0)) {
-            if ((aFields) && (Array.isArray(aFields)) && (aFields.length > 0)) {
+        if (this._gtArray.isValidArray(this.aQueryParamsRequestedFields)) {
+            if (this._gtArray.isValidArray(aFields)) {
                 if (aFields[0] == 'allfields') {
                     return this.aQueryParamsRequestedFields;
                 } else {
@@ -874,27 +893,7 @@ RESTAPI_GET.prototype = {
         } // if requested fields
         return aFields;
     }, // function _filterRequestedFields
-
-    _convertNametoCamelCase: function(sName) {
-        if (sName) {
-            var aResult = [];
-            sName.split('_').forEach(function(sWord) {
-                sWord = sWord.replace(/[^a-zA-Z]/g, '');
-                aResult.push(sWord.charAt(0).toUpperCase() + sWord.substr(1).toLowerCase());
-            }); // each word
-            return aResult.join('');
-        } // if name
-        return sName;
-    }, // function _convertNametoCamelCase
-
-    _convertCommaStringToArray: function(sCommaString) {
-        var aResult = [];
-        sCommaString = sCommaString.replace(/[\n\s]+/g, '');
-        if (sCommaString) {
-            aResult = sCommaString.split(',');
-        } // if comma string
-        return aResult;
-    }, // function _convertCommaStringToArray
+   
 
     type: 'RESTAPI_GET',
     version: '1.0.0',
@@ -905,13 +904,13 @@ RESTAPI_GET.prototype = {
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-11-07 08:11:56</sys_created_on>
         <sys_id>d38d71261bd671105e14b8449b4bcb98</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>24</sys_mod_count>
         <sys_name>RESTAPI_GET</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_d38d71261bd671105e14b8449b4bcb98</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-11-07 11:57:46</sys_updated_on>
+        <sys_updated_on>2023-11-07 21:05:35</sys_updated_on>
     </sys_script_include>
 </record_update>

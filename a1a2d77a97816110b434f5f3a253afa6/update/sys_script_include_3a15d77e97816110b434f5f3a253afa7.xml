@@ -2,16 +2,16 @@
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>package_private</access>
         <active>true</active>
-        <api_name>x_snc_interface_cm.ConfigurationManager</api_name>
+        <api_name>x_snc_interface_cm.ObjectManager</api_name>
         <caller_access/>
         <client_callable>false</client_callable>
-        <description>Translates Configuration into REST or GraphQL API definitions</description>
-        <name>ConfigurationManager</name>
-        <script><![CDATA[var ConfigurationManager = Class.create();
-ConfigurationManager.prototype = {
-	initialize: function(grConfig) {
-		this.grConfig = grConfig;
-		this._cfg = new x_snc_json_cfg_mgr.getCfg(grConfig);
+        <description>Translates Configuration Object into REST, GraphQL APIs definitions or Transform Maps</description>
+        <name>ObjectManager</name>
+        <script><![CDATA[var ObjectManager = Class.create();
+ObjectManager.prototype = {
+	initialize: function(grInterfaceConfig) {
+		this.grConfig = grInterfaceConfig;
+		this._cfg = new x_snc_json_cfg_mgr.getCfg(grInterfaceConfig);
 		this.oConfig = this._cfg.getConfig();
 		this._getValue = this._cfg.getValue;
 	}, // function initialize
@@ -24,7 +24,11 @@ ConfigurationManager.prototype = {
 
 	}, // function createOrUpdateGraphQLAPI
 
-	type: 'ConfigurationManager',
+	createOrUpdateTransformMap: function() {
+
+	}, // function createOrUpdateTransformMap
+
+	type: 'ObjectManager',
 	version: '1.0.0',
 	author: 'Tom Hauri',
 	email: 'tom@hauri.biz'
@@ -34,13 +38,13 @@ ConfigurationManager.prototype = {
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-02-20 09:48:12</sys_created_on>
         <sys_id>3a15d77e97816110b434f5f3a253afa7</sys_id>
-        <sys_mod_count>3</sys_mod_count>
-        <sys_name>ConfigurationManager</sys_name>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>ObjectManager</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_3a15d77e97816110b434f5f3a253afa7</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-02-22 16:13:55</sys_updated_on>
+        <sys_updated_on>2023-11-07 13:58:21</sys_updated_on>
     </sys_script_include>
 </record_update>

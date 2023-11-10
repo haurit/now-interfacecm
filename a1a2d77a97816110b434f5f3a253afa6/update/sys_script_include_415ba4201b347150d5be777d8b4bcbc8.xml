@@ -9,234 +9,48 @@
         <name>RESTAPI_POST_PUT</name>
         <script><![CDATA[var RESTAPI_POST_PUT = Class.create();
 RESTAPI_POST_PUT.prototype = {
-    initialize: function(sInterfaceConfig) {
+	initialize: function (sInterfaceConfig) {
 		this._cfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfig);
 		this.oConfig = this._cfg.getConfig();
 		this._getValue = this._cfg._getValue;
 		this._gt = new global.GlobalTools();
-    }, // function initialize
-	
-	process: function(oRequest, oResponse) {
+		this._gtArray = new global.GlobalToolsArray();
+		this._unique = this._gtArray.unique;
+		this._isValidArray = this._gtArray.isValidArray;
+		this._gtObject = new global.GlobalToolsObject();
+		this._getValue = this._gtObject.getValue;
+		this._setValue = this._gtObject.setValue;
+		this._gtRead = new global.GlobalToolsRecordRead();
+		this._gtRecordWriteValidate = new global.GlobalToolsRecordWriteValidate();
+	}, // function initialize
+
+	process: function (oRequest, oResponse) {
 		this.oRequest = oRequest;
-        this.oResponse = oResponse;
-	}, // function getData
-	
-	_parseConfigAndValidateRequestBody: function() {
-        try {
-            if (!this.oConfig) {
-                this._setError('405_001');
-                return true;
-            } // if not cfg
-            if (this.oConfig['bLog']) {
-                gs.info('NOWCORESTUtils._parseConfigAndValidateRequestBody oConfig: ' + JSON.stringify(this.oConfig));
-            } // if log
-            if ((this.oConfig['sAction'] != 'update') && (this.oConfig['sAction'] != 'insert') && (this.oConfig['sAction'] != 'delete')) {
-                this._setError('405_002');
-                return true;
-            } // if not action	
-            try {
-                this.oBody = this.oRequest.body.data;
-                if (Object.keys(this.oBody).length == 0) {
-                    this._setError('400_002', [], ['No body found']);
-                    return true;
-                } // if body is empty
-            } catch (oEx) {
-                this._setError('400_002', [], [String(oEx)]);
-                return true;
-            } // if request body
-            this.bLogToTable = this._nsub(this.oConfig, false, 'boolean', 'bLogToTable');
-            this.bNoAutoSysFields = this._nsub(this.oConfig, false, 'boolean', 'bNoAutoSysFields');
-            this.bNoWorkflow = this._nsub(this.oConfig, false, 'boolean', 'bNoWorkflow');
-            this.bNoDomain = this._nsub(this.oConfig, false, 'boolean', 'bNoDomain');
-            this.bUseGlideRecordSecure = this._nsub(this.oConfig, false, 'boolean', 'bUseGlideRecordSecure');
-            var bErrorOnAddlFieldsInBody = false,
-                aBeforeBodyChecks = [],
-                aFieldCfgCondition = [],
-                aMandatoryFields = [],
-                grRecordTest, sFieldName = '',
-                aFieldInclKeys = [];
-            Object.keys(this.oConfig['oTables']).some(function(sTable) {
-                if ((!this.bError) && (this.oBody.hasOwnProperty(sTable))) {
-                    grRecordTest = new GlideRecord(sTable);
-                    this.oCfgFields[sTable] = [];
-                    this.oCfgFieldsCfg[sTable] = {};
-                    Object.keys(this.oBody[sTable]).forEach(function(sKey) {
-                        this.aBodyFields.push(sKey);
-                    }, this); // for each body key
-                    bErrorOnAddlFieldsInBody = this._nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bErrorOnAddlFieldsInBody');
-                    aBeforeBodyChecks = this._nsub(this.oConfig['oTables'][sTable], [], 'array', 'aBeforeBodyChecks');
-                    this.oConfig['oTables'][sTable]['aKeys'].forEach(function(sKey) {
-                        if (Array.isArray(sKey)) {
-                            sKey.forEach(function(sKeyPart) {
-                                sFieldName = sKeyPart;
-                                if (sKeyPart.hasOwnProperty('sInputField')) {
-                                    aFieldInclKeys.push(sKeyPart['sInputField']);
-                                } else if (grRecordTest.isValidField(sFieldName)) {
-                                    aFieldInclKeys.push(sFieldName);
-                                } // if valid field
-                            }, this); // each multipart key
-                        } else {
-                            sFieldName = sKey;
-                            if (sKey.hasOwnProperty('sInputField')) {
-                                sFieldName = sKey['sInputField'];
-                            } // if key obj
-                            if (grRecordTest.isValidField(sFieldName)) {
-                                aFieldInclKeys.push(sFieldName);
-                            } // if valid field
-                        } // if key array
-                    }, this); // all keys
-                    this.oConfig['oTables'][sTable]['aFields'].forEach(function(sField) {
-                        sFieldName = (sField.hasOwnProperty('sField')) ? sField['sField'] : sField;
-                        if (grRecordTest.isValidField(sFieldName)) {
-                            if (sField.hasOwnProperty('sField')) {
-                                if (!this.oCfgFieldsCfg[sTable].hasOwnProperty(sFieldName)) {
-                                    this.oCfgFieldsCfg[sTable][sFieldName] = {};
-                                } // if not field cfg
-                                this.oCfgFieldsCfg[sTable][sFieldName] = sField;
-                            } // if field property
-                            this.oCfgFields[sTable].push(sFieldName);
-                            aFieldInclKeys.push(sFieldName);
-                        } // if valid field
-                        if (sField.hasOwnProperty('aKeys')) {
-                            sField['aKeys'].forEach(function(oKey) {
-                                if (Array.isArray(oKey)) {
-                                    oKey.forEach(function(sKey) {
-                                        if (sKey.hasOwnProperty('sInputField')) {
-                                            aFieldInclKeys.push(sKey['sInputField']);
-                                        } // if key as input field
-                                    }, this); // each key in array
-                                } else if (oKey.hasOwnProperty('sInputField')) {
-                                    aFieldInclKeys.push(oKey['sInputField']);
-                                } // if key has input field
-                            }, this); // each key
-                        } // if field keys 
-                    }, this); // all fields
-                    this.oCfgFields[sTable] = this._unique(this.oCfgFields[sTable]);
-                    aFieldInclKeys = this._unique(aFieldInclKeys);
-                    if (this.oConfig['oTables'][sTable].hasOwnProperty('aFieldCfgCondition')) {
-                        this.oFieldCfgCondition[sTable] = this.oConfig['oTables'][sTable]['aFieldCfgCondition'];
-                    } // if field cfg condition
-                    aMandatoryFields = this._nsub(this.oConfig['oTables'][sTable], [], 'array', 'aMandatoryFields');
-                    if ((aMandatoryFields) && (Array.isArray(aMandatoryFields))) {
-                        if (aMandatoryFields[0] == 'allfields') {
-                            aMandatoryFields = aFieldInclKeys;
-                        } // if all fields mandatory
-                        this.oMandatoryFields[sTable] = aMandatoryFields.join(',').split(','); // copy values, not reference
-                    } // if mandatory fields
-                    // TODO: add fields is checked before field logic is applied. 
-                    if ((!this.bError) && (bErrorOnAddlFieldsInBody)) {
-                        var oAddRemoveResult = this._getAddRemoveFromArrays(this.aBodyFields, aFieldInclKeys);
-                        if (Array.isArray(oAddRemoveResult['add']) && (oAddRemoveResult['add'].length > 0)) {
-                            this._setError('400_004', [], [String(oAddRemoveResult['add'])]);
-                            return true;
-                        } // if array
-                    } // if check for addl fields
-                    aBeforeBodyChecks.some(function(oBeforeBodyCheck) {
-                        return this._runBodyFieldCheck(sTable, oBeforeBodyCheck);
-                    }, this); // before body check
-                } else if (!this.bError) {
-                    this._setError('400_005', [], [sTable]);
-                    return true;
-                } // if body has table
-            }, this); // for each table
-            if (!this.bError) {
-                if (this.oBody.hasOwnProperty('user')) {
-                    this.sImpersonateUser = this.oBody['user'];
-                } // if user
-                if (this.oBody.hasOwnProperty('action')) {
-                    this.sStateFlowAction = this.oBody['action'];
-                } // if action
-            } // if no error
-        } catch (oEx) {
-            this._setError('500_002', [], [String(oEx)]);
-        } // try
-        return this.bError;
-    }, // function _parseConfigAndValidateRequestBody
+		this.oResponse = oResponse;
+		try {
+			var oError = {};
+			var oRecordValues = this.oRequest.body.data;
+			var sRecordId = this._gtRecordWriteValidate(this.oConfig, oRecordValues, oError);
+			if ((!sRecordId) || (sRecordId == '-1') || (!this._getValue('bFatalError', false, oError)) || (!this._getValue('bNoActionError', false, oError))) {
+				this.oResponse.setContentType('application/json');
+				this.oResponse.setStatus(this.iResponseStatusCode); // NN 
+				this.oResponse.setBody(this.oResponseBody);
+			} else {
+				this.oResponse.setContentType('application/json');
+				this.oResponse.setStatus(this.iResponseStatusCode); // NN 
+				this.oResponse.setBody(this.oResponseBody);
+			}
+			
+			
 
-_runBodyFieldCheck: function(sTable, oBeforeBodyCheck, bReturnFalseIfNotFound) {
-        var sCheckType = oBeforeBodyCheck['sCheckType'];
-        var sFieldName = oBeforeBodyCheck['sFieldName'];
-        var sErrorMsg = oBeforeBodyCheck['sErrorMsg'];
-        // TODO: use gs.getMessage()
-        var bCheckValid = (bReturnFalseIfNotFound) ? false : true;
-        var sValue = '',
-            sScript = '',
-            oResult;
-        if (this.oBody[sTable].hasOwnProperty(sFieldName)) {
-            sValue = this.oBody[sTable][sFieldName];
-            if (sCheckType == 'regex') {
-                var sRegExpPattern = oBeforeBodyCheck['sRegExpPattern'];
-                if (sRegExpPattern) {
-                    var sRegExpFlags = oBeforeBodyCheck['sRegExpFlags'];
-                    sRegExpFlags = (sRegExpFlags) ? sRegExpFlags : '';
-                    var rePattern = new RegExp(sRegExpPattern, sRegExpFlags);
-                    bCheckValid = rePattern.test(String(sValue));
-                } // if regex pattern
-            } else if (sCheckType == 'script') {
-                sScript = oBeforeBodyCheck['sScript'];
-                sScript = sScript.replaceAll('sValue', sValue);
-                var bValid;
-                oResult = new GlideScriptEvaluator().evaluateString(sScript, true);
-                if ((oResult) && (JSON.stringify(oResult).indexOf('error') != -1)) {
-                    this._setError('500_006', [], [JSON.stringify(oResult)]);
-                } else if ((oResult) && (oResult.hasOwnProperty('bValid'))) {
-                    bCheckValid = oResult['bValid'];
-                    if (oResult.hasOwnProperty('sErrorMsg')) {
-                        sErrorMsg = oResult['sErrorMsg'];
-                    } // if object has error msg
-                } else {
-                    bCheckValid = (String(oResult) == 'true') ? true : false;
-                } // if results object
-            } // if test type
-        } // if field name
-        if (this.oConfig['bLog']) {
-            gs.info('NOWCORESTUtils._runBodyFieldCheck oBeforeBodyCheck: ' + JSON.stringify(oBeforeBodyCheck) + ' bReturnFalseIfNotFound: ' + bReturnFalseIfNotFound + ' sValue: ' + sValue + ' bCheckValid: ' + bCheckValid);
-        } // if log
-        if (bReturnFalseIfNotFound) {
-            return bCheckValid;
-        } // if return result
-        if (!bCheckValid) {
-            if (sErrorMsg) {
-                this._setError('400_007', [], [sErrorMsg]);
-            } // if error msg
-            return true;
-        } // if not valid
-    }, // function _runBodyFieldCheck
+		} catch (oEx) {
+			this._setError('400_002', [], [String(oEx)]);
+			return true;
+		} // if request body
 
-    _applyFieldCfgLogic: function(grRecordOld, sTable) {
-        var aFieldCfgCondition = this.oFieldCfgCondition[sTable];
-        var sQueryCondition = '',
-            bMatch = false,
-            aFieldsAdd = [],
-            aFieldsRemove = [],
-            aMandatoryFieldsAdd = [],
-            aMandatoryFieldsRemove = [];
-        var aFields = this.oCfgFields[sTable];
-        var aMandatoryFields = ((this.oMandatoryFields[sTable]) && (Array.isArray(this.oMandatoryFields[sTable]))) ? this.oMandatoryFields[sTable] : [];
-        aFieldCfgCondition.some(function(oFieldCfgCondition) {
-            sQueryCondition = oFieldCfgCondition['sQueryCondition'];
-            if (sQueryCondition) {
-                var gfQueryCondition = new GlideFilter(sQueryCondition, '');
-                gfQueryCondition.setCaseSensitive(false);
-                bMatch = (gfQueryCondition.match(grRecordOld, true));
-            } else {
-                bMatch = this._runBodyFieldCheck(sTable, oFieldCfgCondition, true);
-            } // if before query
-            if (bMatch) {
-                aFieldsAdd = this._nsub(oFieldCfgCondition, [], 'array', 'aFields');
-                aFieldsRemove = this._nsub(oFieldCfgCondition, [], 'array', 'aFieldsRemoval');
-                this.oCfgFields[sTable] = this._addRemoveFromArray(aFields, aFieldsAdd, aFieldsRemove);
-                aMandatoryFieldsAdd = this._nsub(oFieldCfgCondition, [], 'array', 'aMandatoryFields');
-                aMandatoryFieldsRemove = this._nsub(oFieldCfgCondition, [], 'array', 'aMandatoryFieldsRemoval');
-                this.oMandatoryFields[sTable] = this._addRemoveFromArray(aMandatoryFields, aMandatoryFieldsAdd, aMandatoryFieldsRemove);
-            } // if before
-            if (this.oConfig['bLog']) {
-                gs.info('NOWCORESTUtils._applyFieldCfgLogic sTable: ' + sTable + ' sQueryCondition: ' + sQueryCondition + ' bMatch: ' + bMatch + ' aFields: ' + this.oConfig['oTables'][sTable]['aFields'] + ' aMandatoryFields: ' + this.oMandatoryFields[sTable]);
-            } // if log
-        }, this); // field cfg condition
-    }, // function _applyFieldCfgLogic
+	}, // function process
 
-    type: 'RESTAPI_POST_PUT',
+	type: 'RESTAPI_POST_PUT',
 	version: '1.0.0',
 	author: 'Tom Hauri',
 	email: 'tom@hauri.biz'
@@ -245,13 +59,13 @@ _runBodyFieldCheck: function(sTable, oBeforeBodyCheck, bReturnFalseIfNotFound) {
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-08-18 07:31:29</sys_created_on>
         <sys_id>415ba4201b347150d5be777d8b4bcbc8</sys_id>
-        <sys_mod_count>17</sys_mod_count>
+        <sys_mod_count>19</sys_mod_count>
         <sys_name>RESTAPI_POST_PUT</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_415ba4201b347150d5be777d8b4bcbc8</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-11-07 11:57:50</sys_updated_on>
+        <sys_updated_on>2023-11-09 20:03:24</sys_updated_on>
     </sys_script_include>
 </record_update>

@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_snc_interface_cm.Configuration</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <name>Configuration</name>
+        <script><![CDATA[var Configuration = Class.create();
+Configuration.prototype = {
+    initialize: function(oConfiguration) {
+        this.oError = {
+            'bFatalError': false,
+            'aErrorMessages': [],
+        }; // error object
+        this.grConfiguration;
+        if ((oConfiguration) && ((String(oConfiguration).indexOf('GlideRecord') != -1) || (String(oConfiguration).length == 32))) {
+            if (String(oConfiguration).indexOf('GlideRecord') != -1) {
+                if (oConfiguration.isValidRecord()) {
+                    this.grConfiguration = oConfiguration;
+                } else {
+                    this.oError['bFatalError'] = true;
+                    this.oError['aErrorMessages'].push('initialize error grConfiguration is not valid');
+                } // if is valid
+            } else {
+                var grConfiguration = new GlideRecord('x_snc_interface_cm_configuration');
+                if (grConfiguration.get(String(oConfiguration))) {
+                    this.grConfiguration = grConfiguration;
+                } else {
+                    this.oError['bFatalError'] = true;
+                    this.oError['aErrorMessages'].push('initialize error grConfiguration cannot be found: ' + String(oConfiguration));
+                } // if config found
+            } // if is glide record
+            if (!this.oError['bFatalError']) {
+                this._GlideRecordUtil = new global.GlideRecordUtil();
+                this._gtRecordWriteValidate = new global.GlobalToolsRecordWriteValidate();
+                this._gtArray = new global.GlobalToolsArray();
+                this._gtObject = new global.GlobalToolsObject();
+                this._getCfg = new x_snc_json_cfg_mgr.getCfg(this.grConfiguration);
+                this._getValue = this._getCfg.getValue;
+                this._setValue = this._getCfg.setValue;
+				//this._customLookups = new CustomLookups();
+                this.bLog = this._getCfg.getValue('oGeneric/bLog', false);
+                this.sLogPrefix = this._getCfg.getValue('oGeneric/sLogPrefix', 'Configuration - ');
+                this.oConfig = this._getCfg.getConfig();
+                this.oCurrentSource = {};
+                this.oModel = {
+                    'aTableSequence': [],
+                    'oTables': {},
+                }; // model
+                this.oCache = {};
+            } // if no error
+        } else {
+            this.oError['bFatalError'] = true;
+            this.oError['aErrorMessages'].push('initialize error missing parameter grConfiguration');
+        } // if config
+    }, // function initialize
+
+    _calculateModel: function() {
+        if (this.bLog) {
+            gs.info(this.sLogPrefix + 'calculateModel oCurrentSourceData - ' + JSON.stringify(this.oCurrentSourceData));
+        } // if log
+        Object.keys(this._getValue('oTables')).forEach(function(sTable) {
+            var sSourceConditionFieldValue = this._getValue(this._getValue('oTables/' + sTable + '/oSourceCondition/sSourceField', ''), '', this.oCurrentSourceData);
+            if (sSourceConditionFieldValue) {
+                var sSourceConditionRegEx = this._getValue('oTables/' + sTable + '/oSourceCondition/sRegExp', '');
+                var sRegExpFlags = this._getValue('oTables/' + sTable + '/oSourceCondition/sRegExpFlags', '');
+                var reSourceCondition = RegExp(sSourceConditionRegEx, sRegExpFlags);
+                if (!reSourceCondition.test(sSourceConditionFieldValue)) {
+                    return true;
+                } // if regex does not match, do not create object
+            } // if source condition and regex
+            var sTargetTable = this._getValue('oTables/' + sTable + '/sTargetTable', sTable);
+			var iTableSequence = this._getValue('oTables/' + sTable + '/iSequence', 100);
+			var sTableSequenceId = String(iTableSequence) + '|' + sTable + '|' + sTargetTable;
+            this.oModel['aTableSequence'].push(sTableSequenceId);
+			this.oError[sTableSequenceId] = {'aErrorMessages': []};
+            var aFields = [];
+			var oRecordConfig = JSON.parse(JSON.stringify(this._getValue('oRecordConfig', {})));
+			oRecordConfig['sTargetTable'] = sTargetTable;
+			oRecordConfig['aKeys'] = this._getValue('oTables/' + sTable + '/aKeys');
+			oRecordConfig['aFields'] = aFields;
+			oRecordConfig['iTableSequence'] = iTableSequence;
+			oRecordConfig['sTableSequenceId'] = sTableSequenceId;
+            this._gtObject.deepMerge(oRecordConfig, this._getValue('oTables/' + sTable + '/oRecordConfig', {}));
+            var oRecordValues = {};
+            Object.keys(this._getValue('oTables/' + sTable + '/oFieldMap')).forEach(function(sField) {
+                var sSourceField = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/sSourceField', '');
+				var sDefaultValue = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/sDefaultValue', '');
+                var sPrefix = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/sPrefix', '');
+                var sPostfix = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/sPostfix', '');
+                var aKeys = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/aKeys', '');
+				var sRefLookupScript = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/sRefLookupScript', '');
+				var sRelatedTableResultId = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/sRelatedTableResultId', '');
+                var sSourceFieldValue = this._getValue(sSourceField, '', this.oCurrentSourceData);
+                if (sSourceFieldValue) {
+                    oRecordValues[sField] = sSourceFieldValue;
+                } else if ((!sDefaultValue) && (!sRelatedTableResultId)) {
+                    this.oError[sTableSequenceId]['aErrorMessages'].push('Source field \'' + sSourceField + '\' not found in data source!');
+                } // if no source field
+				var oField = {};
+                if (this._gtArray.isValidArray(aKeys)) {
+                    oField['bAddValues'] = this._getValue('oTables/' + sTable + '/oFieldMap/' + sField + '/bAddValues', '');
+					oField['aKeys'] = aKeys;
+				} else if (sRefLookupScript) {
+					oField['sRefLookupScript'] = 'function (oParams) { return new x_kpm83_psk_integr.CustomLookups().' + sRefLookupScript + '(oParams);}';
+				} else if (sRelatedTableResultId) {
+					oField['sRelatedTableResultId'] = sRelatedTableResultId;
+				} // if lookup is key, script or result
+				if ((sDefaultValue) || (sPrefix) || (sPostfix)) {
+					if (sDefaultValue) {
+						oField['sDefaultValue'] = sDefaultValue;
+					} // if default
+					if (sPrefix) {
+						oField['sPrefix'] = sPrefix;
+					} // if default
+					if (sPostfix) {
+						oField['sPostfix'] = sPostfix;
+					} // if default
+				} // if default or pre/postfix
+				if (Object.keys(oField).length > 0) {
+					oField['sField'] = sField;
+					aFields.push(oField);
+				} // if field obj
+            }, this); // each key
+            this._setValue('oTables/' + sTable + '/oRecordConfig', oRecordConfig, this.oModel);
+            this._setValue('oTables/' + sTable + '/oRecordValues', oRecordValues, this.oModel);
+        }, this); // each table
+        this.oModel['aTableSequence'] = this.oModel['aTableSequence'].sort();
+        if (this.bLog) {
+            gs.info(this.sLogPrefix + 'calculateModel oModel - ' + JSON.stringify(this.oModel));
+        } // if log
+    }, // function _calculateModel
+
+    _cleanupModel: function() {
+
+    }, // function _cleanupModel
+
+    _validateAndApplyModel: function() {
+        var oRelatedTableResultIds = {};
+		this.oModel['aTableSequence'].some(function(sTableSequenceId) {
+            var aTableSeqTemp = sTableSequenceId.split('|');
+            var oRecordConfig = this._getValue('oTables/' + aTableSeqTemp[1] + '/oRecordConfig', {}, this.oModel);
+            var oTransformConfig = this._getValue('oTransformConfig', {});
+            this._gtObject.deepMerge(oTransformConfig, this._getValue('oTables/' + aTableSeqTemp[1] + '/oTransformConfig/', {}));
+            this._setValue('oTransformConfig', oTransformConfig, oRecordConfig);
+            var oRecordValues = this._getValue('oTables/' + aTableSeqTemp[1] + '/oRecordValues', {}, this.oModel);
+			this._setValue('oRelatedTableResultIds', oRelatedTableResultIds, oRecordConfig);
+            var sRecordId = this._gtRecordWriteValidate.validateAndWrite(oRecordConfig, oRecordValues, this.oError);
+			this._setValue(aTableSeqTemp[1], sRecordId, oRelatedTableResultIds);
+			this._setValue('oTables/' + aTableSeqTemp[1] + '/oRecordValues/sys_id', sRecordId, this.oModel);
+			if (!this._canContinue(sTableSequenceId)) {
+				return true;
+			} // if not continue
+        }, this);
+    }, // _validateModel 
+
+    runJob: function() {
+        this._getSourceData();
+        if (this._canContinue()) {
+            while (this._getCurrentSourceData()) {
+                this._calculateModel();
+                this._validateAndApplyModel();
+                this._cleanupModel();
+            } // while source records
+        } // if data source
+        this._terminate();
+    }, // function runJob
+
+    renderTestConfig: function() {
+        var sHTML = '';
+        var bShowRealModel = this._getValue('oTestConfig/bShowRealModel', false);
+        if (!bShowRealModel) {
+            this._setValue('oDataSource/iLimit', 1);
+            if (this._getValue('oTestConfig/bShowConfig')) {
+                this._setValue('oConfig', this.oConfig, this.oModel);
+            } // if show config
+            this._setValue('oGeneric/sLogPrefix', this.sLogPrefix, this.oModel);
+            this._setValue('oGeneric/bLog', this.bLog, this.oModel);
+            this._setValue('oGeneric/sConfigName', this.grConfiguration.getValue('name'), this.oModel);
+            this._setValue('oDataSource/sSourceTable', this._getValue('oDataSource/sSourceTable'), this.oModel);
+            this._setValue('oDataSource/aAdditionalSourceTables', this._getValue('oDataSource/aAdditionalSourceTables'), this.oModel);
+            this._setValue('oDataSource/sQuery', this._getValue('oDataSource/sQuery'), this.oModel);
+        } // if not real model
+        this._getSourceData();
+        if (this._canContinue()) {
+            if (!bShowRealModel) {
+                this._setValue('oDataSource/iRowCount', this.grSource.getRowCount(), this.oModel);
+            } // if not real model
+            while (this._getCurrentSourceData()) {
+                if (!bShowRealModel) {
+                    if (this._getValue('oTestConfig/bShowSourceObject')) {
+                        this._setValue('oCurrentSourceData/' + this.oCurrentSourceData['id'], this.oCurrentSourceData, this.oModel);
+                    } else {
+                        this._setValue('oCurrentSourceData/' + this.oCurrentSourceData['id'], this.oCurrentSourceData['ps_name'], this.oModel);
+                    } // if show source record
+                } // if not real model
+                this._calculateModel();
+                this._validateAndApplyModel();
+            } // while source records
+        } // if data source
+		// TODO: find way to detect if error has happened
+        //if (this.oError['aErrorMessages'].length > 0) {
+            this._setValue('oError', this.oError, this.oModel);
+        //} // if error
+        sHTML += '<pre>' + JSON.stringify(this.oModel, null, 2) + '</pre>';
+        this._terminate();
+        return sHTML;
+    }, // function renderTestConfig
+
+    _getCurrentSourceData: function() {
+        this.oCurrentSourceData = {};
+        if (this.grSource.next()) {
+            this._populateCurrentSourceData(this.grSource);
+            this.aAdditionalSourceTables.forEach(function(sAdditionalSourceTable) {
+                var grAdditionalSourceTable = new GlideRecord(sAdditionalSourceTable);
+                if (grAdditionalSourceTable.get('id', this.grSource.getValue('id'))) {
+                    this._populateCurrentSourceData(grAdditionalSourceTable);
+                } // populate additional data
+            }, this); // each additional table
+            return true;
+        } // if next source row
+    }, // function _getCurrentSourceRow
+
+    _populateCurrentSourceData: function(grRecord) {
+        var sTableName = grRecord.getTableName();
+        var aFields = this._getValue('oTables/' + sTableName + '/aFields', [], this.oCache);
+        if ((!aFields) || (!Array.isArray(aFields)) || (aFields.length == 0)) {
+            aFields = this._GlideRecordUtil.getFields(grRecord);
+            this._setValue('oTables/' + sTableName + '/aFields', aFields, this.oCache);
+        } // if not yet cached
+        aFields.forEach(function(sField) {
+            if (!this.oCurrentSourceData.hasOwnProperty(sField)) {
+                this.oCurrentSourceData[sField] = grRecord.getValue(sField);
+            } // if new
+        }, this); // each field
+    }, // function _populateCurrentSourceData
+
+    _getSourceData: function() {
+        var sSourceTable = this._getValue('oDataSource/sSourceTable', 'x_kpm83_psk_integr_raw_data_dump');
+        this.aAdditionalSourceTables = this._getValue('oDataSource/aAdditionalSourceTables', []);
+        var sQuery = this._getValue('oDataSource/sQuery', '');
+        var iLimit = this._getValue('oDataSource/iLimit', 0);
+        this.grSource = new GlideRecord(sSourceTable);
+        if (sQuery) {
+            this.grSource.addEncodedQuery(sQuery);
+        } // if query
+        if (iLimit > 0) {
+            this.grSource.setLimit(iLimit);
+        } // if limit
+        this.grSource.query();
+        if (!this.grSource.getRowCount() > 0) {
+            this.oError['bFatalError'] = true;
+            this.oError['aErrorMessages'].push('not data found for table "' + sSourceTable + '" and query "' + sQuery + '"');
+        } // if data found
+    }, // function _getSourceData
+
+    _canContinue: function(sTableSequenceId) {
+		var bCanContinue = true;
+		if (this._getValue(sTableSequenceId + '/bFatalError', '', this.oError)) {
+			bCanContinue = false;
+			this.oError['bFatalError'] = true;
+		} else if (this.oError['bFatalError']) {
+			bCanContinue = false;
+		} // if sequence error
+        return bCanContinue;
+    }, // function _canContinue
+
+    _terminate: function() {
+        if (this.oError['aErrorMessages'].length > 0) {
+            var sErrorMessages = this.sLogPrefix + JSON.stringify(this.oError);
+            if (this._canContinue()) {
+                gs.warn(sErrorMessages);
+            } else {
+                gs.error(sErrorMessages);
+            } // if fatal error
+        } // if error messages
+    }, // function _terminate
+
+    type: 'Configuration',
+	version: '1.0.0',
+	author: 'Tom Hauri',
+	email: 'tom@hauri.biz'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-07 12:12:39</sys_created_on>
+        <sys_id>58943eaa1bde31104422dc61ab4bcbcf</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Configuration</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_script_include_58943eaa1bde31104422dc61ab4bcbcf</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-07 12:24:01</sys_updated_on>
+    </sys_script_include>
+</record_update>

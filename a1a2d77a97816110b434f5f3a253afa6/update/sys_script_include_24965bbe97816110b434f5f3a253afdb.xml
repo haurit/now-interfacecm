@@ -9,15 +9,14 @@
         <name>RESTAPI</name>
         <script><![CDATA[var RESTAPI = Class.create();
 RESTAPI.prototype = {
-    initialize: function(sInterfaceConfig) {
-		this._cfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfig);
-		this.oConfig = this._cfg.getConfig();
-		this._getValue = this._cfg._getValue;
+	initialize: function (sInterfaceConfig) {
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfig);
+		this.oConfig = this._getCfg.getConfig();
+		this._getValue = this._getCfg.getValue;
 	}, // function initialize
-	
-	process: function(oRequest, oResponse) {
-		
-		if (this._getValue('sAction') == 'read') {
+
+	process: function (oRequest, oResponse) {
+		if (this._getValue('sAction', 'read') == 'read') {
 			new RESTAPI_GET(this.oConfig).process(oRequest, oResponse);
 		} else {
 			new RESTAPI_POST_PUT(this.oConfig).process(oRequest, oResponse);
@@ -28,19 +27,19 @@ RESTAPI.prototype = {
 	version: '1.0.0',
 	author: 'Tom Hauri',
 	email: 'tom@hauri.biz'
-    
+
 };]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-02-20 09:52:07</sys_created_on>
         <sys_id>24965bbe97816110b434f5f3a253afdb</sys_id>
-        <sys_mod_count>12</sys_mod_count>
+        <sys_mod_count>24</sys_mod_count>
         <sys_name>RESTAPI</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_24965bbe97816110b434f5f3a253afdb</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-11-07 11:56:40</sys_updated_on>
+        <sys_updated_on>2023-11-08 10:11:46</sys_updated_on>
     </sys_script_include>
 </record_update>
