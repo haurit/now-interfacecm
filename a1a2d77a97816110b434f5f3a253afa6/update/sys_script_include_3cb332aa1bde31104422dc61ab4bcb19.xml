@@ -2,25 +2,27 @@
     <sys_script_include action="INSERT_OR_UPDATE">
         <access>package_private</access>
         <active>true</active>
-        <api_name>x_snc_interface_cm.TestConfig</api_name>
+        <api_name>x_snc_interface_cm.ConfigTesterClient</api_name>
         <caller_access/>
         <client_callable>true</client_callable>
-        <description>Provides functions  to test the configuration</description>
-        <name>TestConfig</name>
-        <script><![CDATA[var TestConfig = Class.create();
-TestConfig.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
+        <description>Provides functions  to test the configuration (called by UI page testconfig)</description>
+        <name>ConfigTesterClient</name>
+        <script><![CDATA[var ConfigTesterClient = Class.create();
+ConfigTesterClient.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
 
-	renderHTML: function (sId) {
-		var grConfiguration = new GlideRecord('x_snc_interface_cm_configuration');
-		if (grConfiguration.get(sId)) {
-			var _cfg = new Configuration(grConfiguration);
-			return _cfg.renderTestConfig();
+	renderHTML: function (sInterfaceConfigId) {
+		var sHTML = '';
+		var _ConfigTester = new x_snc_interface_cm.ConfigTester(sInterfaceConfigId);
+		var oModel = _ConfigTester.getModel();
+		if (oModel) {
+			sHTML += '<pre>' + JSON.stringify(oModel, null, 2) + '</pre>';
+			return sHTML;
 		} else {
-			return '<div><p>SI not found: ' + sId + '</p></div>';
+			return '<div><p>Model could not be generated for interface id: ' + sInterfaceConfigId + '</p></div>';
 		} // if config
 	}, // function renderHTML
-	
-    type: 'TestConfig',
+
+	type: 'ConfigTesterClient',
 	version: '1.0.0',
 	author: 'Tom Hauri',
 	email: 'tom@hauri.biz'
@@ -29,13 +31,13 @@ TestConfig.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-11-07 12:11:03</sys_created_on>
         <sys_id>3cb332aa1bde31104422dc61ab4bcb19</sys_id>
-        <sys_mod_count>1</sys_mod_count>
-        <sys_name>TestConfig</sys_name>
+        <sys_mod_count>24</sys_mod_count>
+        <sys_name>ConfigTesterClient</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_3cb332aa1bde31104422dc61ab4bcb19</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-11-07 13:46:08</sys_updated_on>
+        <sys_updated_on>2023-11-16 11:32:06</sys_updated_on>
     </sys_script_include>
 </record_update>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_snc_interface_cm.TableReader</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Iterates through a table and prepares the values object for each line&#13;
+TODO: &#13;
+- use transaction cache</description>
+        <name>TableReader</name>
+        <script><![CDATA[var TableReader = Class.create();
+TableReader.prototype = {
+	initialize: function (oConfig, grSource) {
+		this.oConfig = oConfig;
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(oConfig);
+		this._getValue = this._getCfg.getValue;
+		this._setValue = this._getCfg.setValue;
+		if (grSource) {
+			this.grSource = grSource;
+		} // if source
+		this._gtArray = new global.GlobalToolsArray();
+		this._gtTable = new global.GlobalToolsTable();
+		this.aAdditionalSourceTables = [];
+		this.oCache = {};
+		this.iRowCount = 0;
+	}, // function initialize
+
+	getSourceData: function () {
+		var sSourceTable = this._getValue('oDataSource/sSourceTable');
+		if (this._gtTable.isValidTable(sSourceTable)) {
+			this.aAdditionalSourceTables = this._getValue('oDataSource/aAdditionalSourceTables', []);
+			var sQuery = this._getValue('oDataSource/sQuery', '');
+			var iLimit = this._getValue('oDataSource/iLimit', 0);
+			this.grSource = new GlideRecord(sSourceTable);
+			if (sQuery) {
+				this.grSource.addEncodedQuery(sQuery);
+			} // if query
+			if (iLimit > 0) {
+				this.grSource.setLimit(iLimit);
+			} // if limit
+			this.grSource.query();
+			this.iRowCount = this.grSource.getRowCount();
+			if (this.iRowCount > 0) {
+				return true;
+			} // if data found
+		} // if no source table
+	}, // function getSourceData
+
+	getCurrentSourceData: function () {
+		this.oCurrentSourceData = {};
+		if (this.grSource.next()) {
+			this._populateCurrentSourceData(this.grSource);
+			this.aAdditionalSourceTables.forEach(function (sAdditionalSourceTable) {
+				var grAdditionalSourceTable = new GlideRecord(sAdditionalSourceTable);
+				if (grAdditionalSourceTable.get('id', this.grSource.getValue('id'))) {
+					this._populateCurrentSourceData(grAdditionalSourceTable);
+				} // populate additional data
+			}, this); // each additional table
+			return true;
+		} // if next source row
+	}, // function getCurrentSourceData
+
+	_populateCurrentSourceData: function (grRecord) {
+		var sTableName = grRecord.getTableName();
+		var aFields = this._getValue('oTables/' + sTableName + '/aFields', [], this.oCache);
+		if (!this._gtArray.isValidArray(aFields)) {
+			aFields = this._gtTable.getFields(grRecord, true);
+			this._setValue('oTables/' + sTableName + '/aFields', aFields, this.oCache);
+		} // if not yet cached
+		aFields.forEach(function (sField) {
+			if (!this.oCurrentSourceData.hasOwnProperty(sField)) {
+				this.oCurrentSourceData[sField] = grRecord.getValue(sField);
+			} // if new
+		}, this); // each field
+	}, // function _populateCurrentSourceData
+
+	type: 'TableReader',
+	version: '1.0.0',
+	author: 'Tom Hauri',
+	email: 'tom@hauri.biz'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-10 08:51:18</sys_created_on>
+        <sys_id>1122a92b1b1231104422dc61ab4bcb5b</sys_id>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>TableReader</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_script_include_1122a92b1b1231104422dc61ab4bcb5b</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-16 11:27:00</sys_updated_on>
+    </sys_script_include>
+</record_update>

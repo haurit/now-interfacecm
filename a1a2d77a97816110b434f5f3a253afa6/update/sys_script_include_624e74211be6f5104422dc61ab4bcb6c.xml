@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_snc_interface_cm.ConfigTester</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Provides functions  to test the configuration </description>
+        <name>ConfigTester</name>
+        <script><![CDATA[var ConfigTester = Class.create();
+ConfigTester.prototype = {
+	initialize: function (sInterfaceConfigId) {
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfigId);
+		this.oConfig = this._getCfg.getConfig();
+		this._getValue = this._getCfg.getValue;
+		this._setValue = this._getCfg.setValue;
+		this._hasValue = this._getCfg.hasValue;
+		this._TableReader = new x_snc_interface_cm.TableReader(this.oConfig);
+	}, // function initialize
+
+	getModel: function () {
+		var oModel = {};
+		if (this.oConfig) {
+			var oResult = {};
+			var oError = {};
+			var oValues = {};
+			this._setValue('oDataSource/iLimit', 1);
+			var _ConfigManager = new x_snc_interface_cm.ConfigManager(this.oConfig, oResult, oError);
+			if (this._getValue('oDataSource/sSourceTable', '')) {
+				if (this._TableReader.getSourceData()) {
+					this._setValue('oDataSource/iRowCount', this._TableReader.iRowCount);
+					this._TableReader.getCurrentSourceData();
+					oValues = this._TableReader.oCurrentSourceData;
+					_ConfigManager.process(this._TableReader.oCurrentSourceData);
+				} else {
+					return '<div><p>Invalid table configured: ' + this._getValue('oDataSource/sSourceTable', '') + '</p></div>';
+				} // if source data
+			} else {
+				if (this._hasValue('oDataSource/sTestValueJSONCfg')) {
+					var _TestValueCfg = new x_snc_json_cfg_mgr.getCfg(this._getValue('oDataSource/sTestValueJSONCfg'));
+					oValues = _TestValueCfg.getConfig();
+				} else if (this._hasValue('oDataSource/oTestValues')) {
+					oValues = this._getValue('oDataSource/oTestValues');
+				} // if test json or values
+				if (oValues) {
+					_ConfigManager.process(oValues);
+				} // if values
+			} // if source
+			if (this._getValue('oTestConfig/bShowResult', true)) {
+				this._setValue('oResult', oResult, oModel);
+			} // if show result
+			if (this._getValue('oTestConfig/bShowError', true)) {
+				this._setValue('oError', oError, oModel);
+			} // if show result
+			if (this._getValue('oTestConfig/bShowConfig', false)) {
+				this._setValue('oConfig', this.oConfig, oModel);
+			} // if show result
+			if (this._getValue('oTestConfig/bShowValues', false)) {
+				this._setValue('oValues', oValues, oModel);
+			} // if show result
+			return oModel;
+		} // if config
+	}, // function getModel
+
+	type: 'ConfigTester',
+	version: '1.0.0',
+	author: 'Tom Hauri',
+	email: 'tom@hauri.biz'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-16 11:19:25</sys_created_on>
+        <sys_id>624e74211be6f5104422dc61ab4bcb6c</sys_id>
+        <sys_mod_count>9</sys_mod_count>
+        <sys_name>ConfigTester</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_script_include_624e74211be6f5104422dc61ab4bcb6c</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-17 13:24:39</sys_updated_on>
+    </sys_script_include>
+</record_update>
