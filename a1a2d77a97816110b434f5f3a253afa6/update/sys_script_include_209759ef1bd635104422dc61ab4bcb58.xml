@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_snc_interface_cm.TMAPI</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Provides functions for Transform Map API</description>
+        <name>TMAPI</name>
+        <script><![CDATA[var TMAPI = Class.create();
+TMAPI.prototype = {
+	initialize: function (sInterfaceConfig, grSource, oLog) {
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfig);
+		this.oConfig = this._getCfg.getConfig();
+		this._getValue = this._getCfg.getValue;
+		this.grSource = grSource;
+		this.oLog = oLog;
+		this.oResult = {};
+		this.oError = {};
+		this._TableReader = new TableReader(this.oConfig, grSource);
+	}, // function initialize
+
+	process: function () {
+		//this._setError();
+		while (this._TableReader.getCurrentSourceData()) {
+			this.oResult = {};
+			this.oError = {};
+			var _ConfigManager = new x_snc_interface_cm.ConfigManager(this.oConfig, this.oResult, this.oError);
+			_ConfigManager.process(this._TableReader.oCurrentSourceData);
+			gs.info('TMAPI.process oResult: ' + JSON.stringify(this.oResult) + ' oError: ' + JSON.stringify(this.oError));
+			if (this._hasError()) {
+				this._setError();
+			} else {
+				this._setResult();
+			} // if error
+		} // while current source
+	}, // function process
+
+	_hasError: function () {
+		if ((this._getValue('bNoActionError', false, this.oError)) || (this._getValue('bFatalError', false, this.oError))) {
+			return true;
+		} // if has error
+	}, // function _hasError
+
+	_setError: function () {
+		this.grSource.setValue('sys_import_state', 'error');
+		this.grSource.setValue('sys_import_state_comment', 'my error');
+		this.grSource.setValue('sys_row_error', 'my error');
+		gs.error('TMAPI._setError');
+	}, // function _setError
+
+	_setResult: function () {
+		this.grSource.setValue('sys_import_state', 'success');
+		this.grSource.setValue('sys_import_state_comment', 'my success');
+		gs.error('TMAPI._setResult');
+	}, // function _setResult
+
+	type: 'TMAPI',
+	version: '1.0.0',
+	author: 'Tom Hauri',
+	email: 'tom@hauri.biz'
+
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-10 07:59:49</sys_created_on>
+        <sys_id>209759ef1bd635104422dc61ab4bcb58</sys_id>
+        <sys_mod_count>11</sys_mod_count>
+        <sys_name>TMAPI</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_script_include_209759ef1bd635104422dc61ab4bcb58</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-10 11:03:37</sys_updated_on>
+    </sys_script_include>
+</record_update>

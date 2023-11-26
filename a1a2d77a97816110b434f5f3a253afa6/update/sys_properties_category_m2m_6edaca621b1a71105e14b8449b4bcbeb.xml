@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_properties_category_m2m">
+    <sys_properties_category_m2m action="INSERT_OR_UPDATE">
+        <category display_value="Interface Configuration Manager">5d1a42621b1a71105e14b8449b4bcbfd</category>
+        <order>1</order>
+        <property display_value="x_snc_interface_cm.logging.verbosity" name="x_snc_interface_cm.logging.verbosity">867a86621b1a71105e14b8449b4bcb58</property>
+        <sys_class_name>sys_properties_category_m2m</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-07 09:09:16</sys_created_on>
+        <sys_id>6edaca621b1a71105e14b8449b4bcbeb</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>x_snc_interface_cm.logging.verbosity.Interface Configuration Manager</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_properties_category_m2m_6edaca621b1a71105e14b8449b4bcbeb</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-07 09:09:16</sys_updated_on>
+    </sys_properties_category_m2m>
+</record_update>

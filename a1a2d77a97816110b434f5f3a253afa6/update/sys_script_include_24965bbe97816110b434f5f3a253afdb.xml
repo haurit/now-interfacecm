@@ -9,37 +9,47 @@
         <name>RESTAPI</name>
         <script><![CDATA[var RESTAPI = Class.create();
 RESTAPI.prototype = {
-    initialize: function(sConfigName) {
-		this._cfg = new x_snc_json_cfg_mgr.getCfg(sConfigName);
-		this.oConfig = this._cfg.getConfig();
-		this._getValue = this._cfg._getValue;
-	},
-	
-	getData: function() {
-		
-	}, // function getData
-	
-	setData: function() {
-		
-	}, // function setData
+	initialize: function (sInterfaceConfig, oRequest, oResponse) {
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(sInterfaceConfig);
+		this.oConfig = this._getCfg.getConfig();
+		this._getValue = this._getCfg.getValue;
+		this.oRequest = oRequest;
+		this.oResponse = oResponse;
+	}, // function initialize
+
+	process: function () {
+		if (this._getValue('sAction', 'read') == 'read') {
+			new RESTAPI_GET(this.oConfig, this.oRequest, this.oResponse).process();
+		} else {
+			new RESTAPI_POST_PUT(this.oConfig, this.oRequest, this.oResponse).process();
+		} // if read
+	}, // function process
+
+	setCustomError: function (sStatusCode, sMessage, sMessageDetail) {
+		var _seCustomError = new sn_ws_err.ServiceError();
+		_seCustomError.setStatus(sStatusCode);
+		_seCustomError.setMessage(sMessage);
+		_seCustomError.setDetail(sMessageDetail);
+		this.oResponse.setError(_seCustomError);
+	}, // function setCustomError
 
 	type: 'RESTAPI',
 	version: '1.0.0',
 	author: 'Tom Hauri',
 	email: 'tom@hauri.biz'
-    
+
 };]]></script>
         <sys_class_name>sys_script_include</sys_class_name>
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-02-20 09:52:07</sys_created_on>
         <sys_id>24965bbe97816110b434f5f3a253afdb</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>26</sys_mod_count>
         <sys_name>RESTAPI</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_24965bbe97816110b434f5f3a253afdb</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-02-22 16:14:19</sys_updated_on>
+        <sys_updated_on>2023-11-10 09:24:25</sys_updated_on>
     </sys_script_include>
 </record_update>

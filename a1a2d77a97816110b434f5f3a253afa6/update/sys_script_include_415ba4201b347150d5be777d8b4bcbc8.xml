@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_snc_interface_cm.RESTAPI_POST_PUT</api_name>
+        <caller_access>1</caller_access>
+        <client_callable>false</client_callable>
+        <description>Provides functions for REST API POST or PUT methods</description>
+        <name>RESTAPI_POST_PUT</name>
+        <script><![CDATA[var RESTAPI_POST_PUT = Class.create();
+RESTAPI_POST_PUT.prototype = {
+	initialize: function (oConfig, oRequest, oResponse) {
+		this.oConfig = oConfig;
+		this.oRequest = oRequest;
+		this.oResponse = oResponse;
+		this.oResult = {};
+		this.oError = {};
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(oConfig);
+		this._getValue = this._getCfg.getValue;
+		this._gtArray = new global.GlobalToolsArray();
+	}, // function initialize
+
+	process: function () {
+		this.aTableSequence = new ConfigManager(this.oConfig, this.oResult, this.oError).process(this._parseBody());
+		gs.info('RESTAPI_POST_PUT.process oResult: ' + JSON.stringify(this.oResult) + ' oError: ' + JSON.stringify(this.oError));
+		if (this._hasError()) {
+			this._setError();
+		} else {
+			this._setResult();
+		} // if error
+	}, // function process
+
+	_parseBody: function () {
+		try {
+			return this.oRequest.body.data;
+		} catch (oEx) {
+			var _seCustomError = new sn_ws_err.ServiceError();
+			_seCustomError.setStatus(400);
+			_seCustomError.setMessage(gs.getMessage('IFCM_RESTAPI_POST_PUT_400_001_ErrorMessage'));
+			_seCustomError.setDetail(gs.getMessage('IFCM_RESTAPI_POST_PUT_400_001_ErrorDetail', [String(oEx)]));
+			this.oResponse.setError(_seCustomError);
+		} // if request body
+	}, // function _parseBody
+
+	_hasError: function () {
+		var bHasError = false;
+		if (this._gtArray.isValidArray(this.aTableSequence)) {
+			this.aTableSequence.forEach(function (sTableSequence) {
+				if ((this._getValue(sTableSequence + '/bNoActionError', false, this.oError)) || (this._getValue(sTableSequence + '/bFatalError', false, this.oError))) {
+					bHasError = true;
+				} // if has error
+			}, this); // each table sequence
+		} else {
+			bHasError = true;
+		} // if table sequence
+		return bHasError;
+	}, // function _hasError
+
+	_setError: function () {
+		var _seCustomError = new sn_ws_err.ServiceError();
+		if (this._gtArray.isValidArray(this.aTableSequence)) {
+			var sStatusCode = 0;
+			var iErrorCount = 0;
+			this.aTableSequence.forEach(function (sTableSequence) {
+				var aErrorMessages = this._getValue(sTableSequence + '/aErrorMessages', [], this.oError);
+				iErrorCount = iErrorCount + aErrorMessages.length;
+				var aErrorCode = this._getValue('sCode', '', aErrorMessages[0]).split('_');
+				sStatusCode = ((sStatusCode == 0) && (aErrorCode[0])) ? aErrorCode[0] : sStatusCode;
+			}, this); // each table sequence
+			_seCustomError.setStatus(sStatusCode);
+			_seCustomError.setMessage(gs.getMessage('IFCM_RESTAPI_POST_PUT_400_003_ErrorMessage', [String(iErrorCount)]));
+			_seCustomError.setDetail(gs.getMessage('IFCM_RESTAPI_POST_PUT_400_003_ErrorDetail', [JSON.stringify(this.oError)]));
+			this.oResponse.setError(_seCustomError);
+		} else {
+			_seCustomError.setStatus(400);
+			_seCustomError.setMessage(gs.getMessage('IFCM_RESTAPI_POST_PUT_400_002_ErrorMessage'));
+			_seCustomError.setDetail(gs.getMessage('IFCM_RESTAPI_POST_PUT_400_002_ErrorDetail'));
+			this.oResponse.setError(_seCustomError);
+		} // if table sequence	
+	}, // function _setError
+
+	_setResult: function () {
+		this.oResponse.setContentType('application/json');
+		this.oResponse.setStatus(200);
+		this.oResponse.setBody(this.oResult);
+	}, // function _setResult
+
+	type: 'RESTAPI_POST_PUT',
+	version: '1.0.0',
+	author: 'Tom Hauri',
+	email: 'tom@hauri.biz'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-08-18 07:31:29</sys_created_on>
+        <sys_id>415ba4201b347150d5be777d8b4bcbc8</sys_id>
+        <sys_mod_count>29</sys_mod_count>
+        <sys_name>RESTAPI_POST_PUT</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_script_include_415ba4201b347150d5be777d8b4bcbc8</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-10 17:47:25</sys_updated_on>
+    </sys_script_include>
+</record_update>

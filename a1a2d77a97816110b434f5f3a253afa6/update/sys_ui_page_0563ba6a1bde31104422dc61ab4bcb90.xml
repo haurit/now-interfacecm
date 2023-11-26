@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_ui_page">
+    <sys_ui_page action="INSERT_OR_UPDATE">
+        <category>general</category>
+        <client_script><![CDATA[function setWindowTitle(title) {
+    window.document.title = title + ' | ' + window.document.title;
+}
+
+function getConfigName() {
+    var gUrl = new GlideURL();
+    gUrl.setFromCurrent();
+    value = gUrl.getParam('sysparm_name');
+    return value;
+}
+
+addLoadEvent(function() {
+	setWindowTitle('Test Config - ' + getConfigName());
+});]]></client_script>
+        <description/>
+        <direct>false</direct>
+        <endpoint>x_snc_interface_cm_testconfig.do</endpoint>
+        <html><![CDATA[<?xml version="1.0" encoding="utf-8" ?>
+<j:jelly trim="false" xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null">
+<div style="padding-left: 20px;">
+	<button class="form_action_button  action_context btn btn-default" onClick="window.location.reload();">Refresh Page</button>
+	<h1>Test Config - $[RP.getParameterValue('sysparm_name')]</h1>
+	<g2:no_escape>$[new ConfigTesterClient().renderHTML(RP.getParameterValue('sysparm_id'))]</g2:no_escape>	
+</div>
+</j:jelly>]]></html>
+        <name>testconfig</name>
+        <processing_script/>
+        <sys_class_name>sys_ui_page</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-07 12:07:26</sys_created_on>
+        <sys_id>0563ba6a1bde31104422dc61ab4bcb90</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>testconfig</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_ui_page_0563ba6a1bde31104422dc61ab4bcb90</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-16 11:28:39</sys_updated_on>
+    </sys_ui_page>
+</record_update>

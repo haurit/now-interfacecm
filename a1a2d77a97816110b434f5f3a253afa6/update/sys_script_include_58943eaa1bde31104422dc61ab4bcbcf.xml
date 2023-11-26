@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_snc_interface_cm.ConfigManager</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description>Parses the configuration for each table and runs the transformation in the defined sequence</description>
+        <name>ConfigManager</name>
+        <script><![CDATA[var ConfigManager = Class.create();
+ConfigManager.prototype = {
+
+	initialize: function (oConfig, oResult, oError) {
+		this.oConfig = oConfig;
+		this.oResult = oResult;
+		this.oError = oError;
+		this._getCfg = new x_snc_json_cfg_mgr.getCfg(oConfig);
+		this._getValue = this._getCfg.getValue;
+		this._setValue = this._getCfg.setValue;
+		this._gtRecordWriteValidate = new global.GlobalToolsRecordWriteValidate();
+		this._gtArray = new global.GlobalToolsArray();
+		this._gtObject = new global.GlobalToolsObject();
+		this.bLog = this._getCfg.getValue('oGeneric/bLog', this._getCfg.getValue('bLog', false));
+		this.sLogPrefix = this._getCfg.getValue('oGeneric/sLogPrefix', this._getCfg.getValue('sLogPrefix', 'Configuration - '));
+		this._setValue('bFatalError', false, this.oError);
+		this._setValue('aErrorMessages', [], this.oError);
+		this.aReservedTopLevelKeyNames = ['oRecordConfig', 'oDataSource', 'oTestConfig', 'oTargetConfig', 'oTables', 'oTransformConfig'];
+		this.oModel = {
+			'aTableSequence': [],
+			'oTables': {},
+		}; // model
+	}, // function initialize
+
+	process: function (oRecordValues) {
+		this.oCurrentSourceData = oRecordValues;
+		this._calculateModel();
+		this._validateAndApplyModel();
+		return this._getValue('aTableSequence', ['default'], this.oModel);
+		//this._cleanupModel();
+		//this._terminate();
+	}, // function runJob
+
+	_calculateModel: function () {
+		if (this.bLog) {
+			gs.info(this.sLogPrefix + 'calculateModel oCurrentSourceData - ' + JSON.stringify(this.oCurrentSourceData));
+		} // if log
+		this._moveKeysToRecordConfig();
+		var iCurrentSourceDataDepth = this._gtObject.getDepth(this.oCurrentSourceData);
+		var oCurrentSourceData = {};
+		Object.keys(this._getValue('oTables')).forEach(function (sTable) {
+			oCurrentSourceData = ((iCurrentSourceDataDepth == 2) && (this.oCurrentSourceData.hasOwnProperty(sTable))) ? this.oCurrentSourceData[sTable] : this.oCurrentSourceData;
+			var sSourceConditionFieldValue = this._getValue(this._getValue('oTables/' + sTable + '/oSourceCondition/sSourceField', ''), '', oCurrentSourceData);
+			if (sSourceConditionFieldValue) {
+				var sSourceConditionRegEx = this._getValue('oTables/' + sTable + '/oSourceCondition/sRegExp', '');
+				var sRegExpFlags = this._getValue('oTables/' + sTable + '/oSourceCondition/sRegExpFlags', '');
+				var reSourceCondition = RegExp(sSourceConditionRegEx, sRegExpFlags);
+				if (!reSourceCondition.test(sSourceConditionFieldValue)) {
+					return true;
+				} // if regex does not match, do not create object
+			} // if source condition and regex
+			var sTargetTable = this._getValue('oTables/' + sTable + '/sTargetTable', sTable);
+			var iTableSequence = this._getValue('oTables/' + sTable + '/iSequence', 100);
+			var sTableSequenceId = String(iTableSequence) + '|' + sTable + '|' + sTargetTable;
+			var bSourceValues = this._getValue('oTables/' + sTable + '/bSourceValues', true);
+			this.oModel['aTableSequence'].push(sTableSequenceId);
+			this.oError[sTableSequenceId] = { 'aErrorMessages': [] };
+			var oRecordConfig = JSON.parse(JSON.stringify(this._getValue('oRecordConfig', {})));
+			oRecordConfig['sTargetTable'] = sTargetTable;
+			oRecordConfig['iTableSequence'] = iTableSequence;
+			oRecordConfig['sTableSequenceId'] = sTableSequenceId;
+			this._gtObject.deepMerge(oRecordConfig, this._getValue('oTables/' + sTable + '/oRecordConfig', {}));
+			Object.keys(this._getValue('oTables/' + sTable, {})).forEach(function (sKey) {
+				this._setValue(sKey, this._getValue('oTables/' + sTable + '/' + sKey), oRecordConfig);
+				delete this.oConfig['oTables'][sTable][sKey];
+			}, this); // each key
+			if (!oRecordConfig.hasOwnProperty('aFields')) {
+				var aFields = [];
+				Object.keys(this._getValue('oFieldMap', {}, oRecordConfig)).forEach(function (sField) {
+					var oField = this._getValue('oFieldMap/' + sField, {}, oRecordConfig);
+					if (Object.keys(oField).length > 0) {
+						oField['sField'] = sField;
+						aFields.push(oField);
+					} // if field obj
+				}, this); // each key
+				oRecordConfig['aFields'] = aFields;
+				delete oRecordConfig['oFieldMap'];
+			} // if no aFields
+			if (bSourceValues) {
+				var oSourceValues = {};
+				oRecordConfig['aFields'].forEach(function (oField) {
+					if (oField.hasOwnProperty('sSourceField')) {
+						oSourceValues[oField['sField']] = this._getValue(oField['sSourceField'], '', oCurrentSourceData);
+					} // if source field
+					//oRecordConfig['aFields']
+				}, this); // each field
+				if (Object.keys(oSourceValues).length > 0) {
+					this._setValue('oTables/' + sTable + '/oRecordValues', oSourceValues, this.oModel);
+				} else {
+					this._setValue('oTables/' + sTable + '/oRecordValues', oCurrentSourceData, this.oModel);
+				} // if source values
+			} else {
+				this._setValue('oTables/' + sTable + '/oRecordValues', {'sys_id': ''}, this.oModel);
+			} // if source values
+			this._setValue('oTables/' + sTable + '/oRecordConfig', oRecordConfig);
+			this._setValue('oTables/' + sTable + '/oRecordConfig', oRecordConfig, this.oModel);
+		}, this); // each table
+		this.oModel['aTableSequence'] = this.oModel['aTableSequence'].sort();
+		if (this.bLog) {
+			gs.info(this.sLogPrefix + 'calculateModel oModel - ' + JSON.stringify(this.oModel));
+		} // if log
+	}, // function _calculateModel
+
+	_moveKeysToRecordConfig: function () {
+		Object.keys(this.oConfig).forEach(function (sKey) {
+			if ((this.aReservedTopLevelKeyNames.indexOf(sKey) == -1)) {
+				this._setValue('oRecordConfig/' + sKey, this._getValue(sKey, undefined));
+				delete this.oConfig[sKey];
+			} // if not reserved word
+		}, this); // each key
+	}, // function _moveKeysToRecordConfig
+
+	_cleanupModel: function () {
+
+	}, // function _cleanupModel
+
+	_validateAndApplyModel: function () {
+		var oRelatedTableResultIds = {};
+		this.oModel['aTableSequence'].some(function (sTableSequenceId) {
+			var aTableSeqTemp = sTableSequenceId.split('|');
+			var oRecordConfig = this._getValue('oTables/' + aTableSeqTemp[1] + '/oRecordConfig', {}, this.oModel);
+			var oTransformConfig = this._getValue('oTransformConfig', {});
+			this._gtObject.deepMerge(oTransformConfig, this._getValue('oTables/' + aTableSeqTemp[1] + '/oTransformConfig/', {}));
+			this._setValue('oTransformConfig', oTransformConfig, oRecordConfig);
+			var oRecordValues = this._getValue('oTables/' + aTableSeqTemp[1] + '/oRecordValues', {}, this.oModel);
+			this._setValue('oRelatedTableResultIds', oRelatedTableResultIds, oRecordConfig);
+			var sRecordId = this._gtRecordWriteValidate.validateAndWrite(oRecordConfig, oRecordValues, this.oError);
+			this._setValue(aTableSeqTemp[1], sRecordId, oRelatedTableResultIds);
+			this._setValue('oTables/' + aTableSeqTemp[1] + '/oRecordValues/sys_id', sRecordId, this.oModel);
+			if (sRecordId) {
+				this._setValue(aTableSeqTemp[1], sRecordId, this.oResult);
+			} // if record id
+			if ((!this._getValue('bIgnoreError', false, oRecordConfig)) && (!this._canContinue(sTableSequenceId))) {
+				return true;
+			} // if not continue
+		}, this);
+	}, // _validateModel 
+
+	runJob: function () {
+		this._getSourceData();
+		if (this._canContinue()) {
+			while (this._getCurrentSourceData()) {
+				this._calculateModel();
+				this._validateAndApplyModel();
+				this._cleanupModel();
+			} // while source records
+		} // if data source
+		this._terminate();
+	}, // function runJob
+
+	_canContinue: function (sTableSequenceId) {
+		var bCanContinue = true;
+		if (this._getValue(sTableSequenceId + '/bFatalError', '', this.oError)) {
+			bCanContinue = false;
+			this.oError['bFatalError'] = true;
+		} else if (this.oError['bFatalError']) {
+			bCanContinue = false;
+		} // if sequence error
+		return bCanContinue;
+	}, // function _canContinue
+
+	_terminate: function () {
+		if (this.oError['aErrorMessages'].length > 0) {
+			var sErrorMessages = this.sLogPrefix + JSON.stringify(this.oError);
+			if (this._canContinue()) {
+				gs.warn(sErrorMessages);
+			} else {
+				gs.error(sErrorMessages);
+			} // if fatal error
+		} // if error messages
+	}, // function _terminate
+
+	type: 'ConfigManager',
+	version: '1.0.0',
+	author: 'Tom Hauri',
+	email: 'tom@hauri.biz'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>tom.hauri</sys_created_by>
+        <sys_created_on>2023-11-07 12:12:39</sys_created_on>
+        <sys_id>58943eaa1bde31104422dc61ab4bcbcf</sys_id>
+        <sys_mod_count>79</sys_mod_count>
+        <sys_name>ConfigManager</sys_name>
+        <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
+        <sys_update_name>sys_script_include_58943eaa1bde31104422dc61ab4bcbcf</sys_update_name>
+        <sys_updated_by>tom.hauri</sys_updated_by>
+        <sys_updated_on>2023-11-24 07:38:32</sys_updated_on>
+    </sys_script_include>
+</record_update>
