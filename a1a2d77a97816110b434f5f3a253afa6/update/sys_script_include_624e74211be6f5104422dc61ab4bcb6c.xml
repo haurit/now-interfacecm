@@ -21,6 +21,15 @@ ConfigTester.prototype = {
 	getModel: function () {
 		var oModel = {};
 		if (this.oConfig) {
+			if (this._getValue('sType') == 'REST') {
+				var oRequest = {};
+				var oResponse = {};
+				var _RESTAPI= new x_snc_interface_cm.RESTAPI(this.oConfig, oRequest, oResponse);
+				_RESTAPI.process(true);
+				this._setValue('oRequest', oRequest, oModel);
+				this._setValue('oResponse', oResponse, oModel);
+				return;
+			} // if REST
 			var oResult = {};
 			var oError = {};
 			var oValues = {};
@@ -71,13 +80,13 @@ ConfigTester.prototype = {
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-11-16 11:19:25</sys_created_on>
         <sys_id>624e74211be6f5104422dc61ab4bcb6c</sys_id>
-        <sys_mod_count>9</sys_mod_count>
+        <sys_mod_count>10</sys_mod_count>
         <sys_name>ConfigTester</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_624e74211be6f5104422dc61ab4bcb6c</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-11-17 13:24:39</sys_updated_on>
+        <sys_updated_on>2024-01-11 20:30:59</sys_updated_on>
     </sys_script_include>
 </record_update>
