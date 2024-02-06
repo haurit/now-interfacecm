@@ -185,7 +185,7 @@ RESTAPI_GET.prototype = {
         } // if no table name
     }, // function _getTableLabel
 
-	_getTableData: function(sTable, iCount, sQuery, aOrderBy, aOrderByDesc, aFields, aDisplayFields, oJournalFields, oReferenceFields, oRelatedTables, oAttributeTable, sReturnType, bValidParentObject, bReturnAttachmentInfoObject, bReturnAttachmentInfoArray) {
+	_getTableData: function(sTable, iCount, sQuery, iMaxReturnCount, aOrderBy, aOrderByDesc, aFields, aDisplayFields, oJournalFields, oReferenceFields, oRelatedTables, oAttributeTable, sReturnType, bValidParentObject, bReturnAttachmentInfoObject, bReturnAttachmentInfoArray) {
         var sQueryParamsQuery = '';
         if (!sQuery) {
             var sParameterQuery = this._gt.nsub(this.oConfig['oTables'][sTable], '', 'string', 'sParameterQuery');
@@ -199,7 +199,8 @@ RESTAPI_GET.prototype = {
         var bOnlyReturnOneRecord = (iCount !== undefined) ? false : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bOnlyReturnOneRecord');
         bReturnAttachmentInfoObject = (iCount !== undefined) ? this._gt.nsub(bReturnAttachmentInfoObject, false) : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bReturnAttachmentInfoObject');
         bReturnAttachmentInfoArray = (iCount !== undefined) ? this._gt.nsub(bReturnAttachmentInfoArray, false) : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bReturnAttachmentInfoArray');
-        var iMaxReturnCount = (iCount !== undefined) ? '' : this._gt.nsub(this.oConfig['oTables'][sTable], 100, 'number', 'iMaxReturnCount');
+		iMaxReturnCount = (iMaxReturnCount) ? iMaxReturnCount : '';
+		iMaxReturnCount = (iCount !== undefined) ? iMaxReturnCount : this._nsub(this.oConfig['oTables'][sTable], 100, 'number', 'iMaxReturnCount');
         iMaxReturnCount = ((iMaxReturnCount) && (this.iQueryParamsMaxReturnCount)) ? this.iQueryParamsMaxReturnCount : iMaxReturnCount;
         var bErrorMaxReturnCount = (iCount !== undefined) ? false : this._gt.nsub(this.oConfig['oTables'][sTable], false, 'boolean', 'bErrorMaxReturnCount');
         var iQueryParamsReturnOffset = ((iCount !== undefined) || (!this.iQueryParamsReturnOffset)) ? '' : this.iQueryParamsReturnOffset;
@@ -648,6 +649,7 @@ RESTAPI_GET.prototype = {
             if (sRelTableQuery) {
                 sQuery = sQuery + '^' + sRelTableQuery;
             } // if query
+			var iMaxReturnCount = this._nsub(oRelatedTables[sRelatedTable], '', 'string', 'iMaxReturnCount');
             var aOrderBy = this._gt.nsub(oRelatedTables[sRelatedTable], [], 'array', 'aOrderBy');
             var aOrderByDesc = this._gt.nsub(oRelatedTables[sRelatedTable], [], 'array', 'aOrderByDesc');
             var aFields = this._gt.nsub(oRelatedTables[sRelatedTable], [], 'array', 'aFields');
@@ -667,7 +669,7 @@ RESTAPI_GET.prototype = {
                 aTempRelTable = sRelatedTable.split('|');
                 sRelatedTable = aTempRelTable[0];
             } // if rel table index name
-            oRelTableResult = this._getTableData(sRelatedTable, 0, sQuery, aOrderBy, aOrderByDesc, aFields, aDisplayFields, oJournalFields, oReferenceFields, oRelRelatedTables, oRelAttributeTable, sReturnType, bValidParentObject, bReturnAttachmentInfoObject, bReturnAttachmentInfoArray);
+            oRelTableResult = this._getTableData(sRelatedTable, 0, sQuery, iMaxReturnCount, aOrderBy, aOrderByDesc, aFields, aDisplayFields, oJournalFields, oReferenceFields, oRelRelatedTables, oRelAttributeTable, sReturnType, bValidParentObject, bReturnAttachmentInfoObject, bReturnAttachmentInfoArray);
             if (sReturnType == 'first') {
                 Object.keys(oRelTableResult).forEach(function(sRelTableResult) {
                     oRecord[sTableName + this._getValue('sRefFieldConcatChar', '_') + sRelTableResult] = oRelTableResult[sRelTableResult];
@@ -912,13 +914,13 @@ RESTAPI_GET.prototype = {
         <sys_created_by>tom.hauri</sys_created_by>
         <sys_created_on>2023-11-07 08:11:56</sys_created_on>
         <sys_id>d38d71261bd671105e14b8449b4bcb98</sys_id>
-        <sys_mod_count>28</sys_mod_count>
+        <sys_mod_count>29</sys_mod_count>
         <sys_name>RESTAPI_GET</sys_name>
         <sys_package display_value="Interface Config Manager" source="x_snc_interface_cm">a1a2d77a97816110b434f5f3a253afa6</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Interface Config Manager">a1a2d77a97816110b434f5f3a253afa6</sys_scope>
         <sys_update_name>sys_script_include_d38d71261bd671105e14b8449b4bcb98</sys_update_name>
         <sys_updated_by>tom.hauri</sys_updated_by>
-        <sys_updated_on>2023-11-15 06:18:09</sys_updated_on>
+        <sys_updated_on>2024-02-06 11:57:38</sys_updated_on>
     </sys_script_include>
 </record_update>
